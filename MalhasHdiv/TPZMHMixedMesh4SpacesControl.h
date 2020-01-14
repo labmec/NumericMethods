@@ -1,6 +1,6 @@
 //
 //  TPZMHMixedMeshControl.hpp
-//  PZ
+//  Numeric Methods
 //
 
 

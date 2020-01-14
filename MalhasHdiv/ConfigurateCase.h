@@ -1,6 +1,6 @@
 //
 //  ConfigurateCase.h
-//  ReservoirSimulation
+//  Numeric Methods
 //
 //  Created by Jorge Paúl Ordóñez Andrade on 10/11/19.
 

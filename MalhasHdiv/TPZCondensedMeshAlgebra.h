@@ -1,6 +1,6 @@
 //
 //  TPZCondensedMeshAlgebra.h
-//  ReservoirSimulation
+//  Numeric Methods
 //
 //  ** Data structure of the preconditioner **
 //

@@ -1,6 +1,6 @@
 //
 //  ConfigurateCase.h
-//  ReservoirSimulation
+//  Numeric Methods
 //
 //  Created by Jorge Paúl Ordóñez Andrade on 10/11/19.
 
@@ -348,8 +348,7 @@ TPZAutoPointer<TPZMHMixedMesh4SpacesControl> ConfigurateCase::CreateMHMMixedMesh
     
         
         mhm->DefinePartitionbyCoarseIndices(coarseindices);
-        // criam-se apenas elementos geometricos
-
+        // Create just geometric elements
     
         {
             std::set<int> matids;
@@ -457,8 +456,8 @@ TPZGeoMesh* ConfigurateCase::CreateGeowithRefPattern(){
     
     TPZGeoEl *gel = gmeshrefpattern->Element(0);
     
-    TPZFMatrix<REAL> cooridnates;
-    gel->NodesCoordinates(cooridnates);             //Gets the element coordinates
+    TPZFMatrix<REAL> coordinates;
+    gel->NodesCoordinates(coordinates);             //Gets the element coordinates
     TPZVec<int64_t> nodeindex(4);                   //Quadrilateral coordinates
     TPZVec<int64_t> nodeindexline(2);               //Line coordinates
     int nnodes = gmeshrefpattern->NNodes();         //Gets the number of nodes
@@ -468,10 +467,10 @@ TPZGeoMesh* ConfigurateCase::CreateGeowithRefPattern(){
     //Gets the middle nodes between the "atomic" nodes
     TPZVec<REAL> x(3,0);
     x[0]= 0.0;
-    x[1]= 0.5*(cooridnates(1,0)+cooridnates(1,2));
+    x[1]= 0.5*(coordinates(1,0)+coordinates(1,2));
     gmeshrefpattern->NodeVec()[nnodes].Initialize(nnodes, x, *gmeshrefpattern);
-    x[0]=cooridnates(0,1);
-    x[1]=0.5*(cooridnates(1,1)+cooridnates(1,3));
+    x[0]=coordinates(0,1);
+    x[1]=0.5*(coordinates(1,1)+coordinates(1,3));
     gmeshrefpattern->NodeVec()[nnodes+1].Initialize(nnodes+1, x, *gmeshrefpattern);
     
     //Sets the partition definition for lines

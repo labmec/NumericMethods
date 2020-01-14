@@ -1,6 +1,5 @@
 //
 //  TPZHdivTransfer.h
-//  reservoirlib
 //
 //  Created by Jorge Paúl Ordóñez Andrade on 15/07/19.
 //

@@ -1,6 +1,6 @@
 //
 //  TPZDistributedMeshAlgebra.h
-//  ReservoirSimulation
+//  Numeric Methods
 //
 //  Created by Jorge Paúl Ordóñez Andrade on 05/11/19.
 //

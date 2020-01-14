@@ -1,6 +1,5 @@
 //
 //  RSimulationCase.h
-//  MonophasicTest
 //
 //  Created by Jose on 5/9/19.
 //
