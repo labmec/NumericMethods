@@ -29,83 +29,51 @@ int main(){
     SimulationCase sim;
     bool IsCondensedQ = sim.IsCondensedQ;
     
-    if (IsCondensedQ) {
+    if (1) {
         
         MHMIxed->ComputeNodElCon();
         int dim = MHMIxed->Dimension();
         int64_t nel = MHMIxed->NElements();
-//        for (int64_t el =0; el<nel; el++) {
+
+        
+//        aqui
+        MHMIxed->ComputeNodElCon();
+        int nconnects = MHMIxed->NConnects();
+        for (int icon=0; icon<nconnects; icon++) {
+            TPZConnect &connect = MHMIxed->ConnectVec()[icon];
+            int lagrangeMult = connect.LagrangeMultiplier();
+            if (lagrangeMult==3) {
+                connect.IncrementElConnected();
+            }
+        }
+        
+        
+        
+//        int dimel = MHMIxed->Dimension();
+//        int64_t nels = MHMIxed->NElements();
+//        for (int64_t el =0; el<nels; el++) {
 //            TPZCompEl *cel = MHMIxed->Element(el);
 //            if(!cel) continue;
-//            TPZMultiphysicsElement *mul = dynamic_cast<TPZMultiphysicsElement *>(cel);
-//            TPZCondensedCompEl *cond = dynamic_cast<TPZCondensedCompEl *>((cel));
-//            TPZSubCompMesh *subcmesh = dynamic_cast<TPZSubCompMesh *>((cel));
-//            TPZChunkVector<TPZCompEl *> celsubvec;
-//            if(subcmesh){
-//                subcmesh->LoadReferences();
-//                celsubvec = subcmesh->ElementVec();
+//            TPZGeoEl *gel = cel->Reference();
+////            if(!gel) continue;
+//            TPZSubCompMesh *subcmesh = dynamic_cast<TPZSubCompMesh*>(cel);
+//            if (subcmesh) {
+//                int nsubels = subcmesh->NElements();
+//                for (int isub=0; isub<nsubels; isub++) {
+//                    TPZCompEl *subel = subcmesh->Element(isub);
+//                    
+//                    std::cout<<"ok"<<std::endl;
+//                }
+//                
+//                
 //            }
-//
-//            int nsubel = celsubvec.NElements();
-//            for (int ielsub =0 ; ielsub < nsubel; ielsub++) {
-//                TPZCompEl *celsub = celsubvec[ielsub];
-//                if(!celsub){
-//                    continue;
-//                }
-//                TPZCondensedCompEl *conden = dynamic_cast<TPZCondensedCompEl *>(celsub);
-//                TPZElementGroup *elgroup;
-//
-//                if(conden){
-//                    mul =dynamic_cast<TPZMultiphysicsElement *>(conden->ReferenceCompEl());
-//                    elgroup = dynamic_cast<TPZElementGroup *>(conden->ReferenceCompEl());
-//                }
-//                else{
-//                    continue;
-//                }
-//
-//                TPZStack<TPZCompEl *, 5> groupvec;
-//                if (elgroup) {
-//                    groupvec = elgroup->GetElGroup();
-//                }
-//                int nelgroup = groupvec.size();
-//                for (int ielgr=0; ielgr<nelgroup; ielgr++) {
-//                    TPZCompEl *celgr =groupvec[ielgr];
-//                    if(!celgr){
-//                        continue;
-//                    }
-//                    TPZMultiphysicsElement *mulsub = dynamic_cast<TPZMultiphysicsElement *>(celgr);
-//                    TPZCompEl *celpaver = mulsub->Element(3);
-//                    if (!celpaver) {
-//                        continue;
-//                    }
-//                    TPZGeoEl *gel = celgr->Reference();
-//                    if(!gel) continue;
-//                    if(gel->Dimension() != dim) continue;
-//                    int nc = mulsub->NConnects();
-//                    mulsub->Connect(nc-1).Print(*MHMIxed);
-//                    mulsub->Connect(nc-1).IncrementElConnected();
-////                    mulsub->Connect(nc-1).IncrementElConnected();
-//                }
-//            }
-//
-//
+//            if(gel->Dimension() != 2) continue;
+//            int nc = cel->NConnects();
+//            cel->Connect(nc-1).IncrementElConnected();
 //        }
-//        MHMIxed->ComputeNodElCon();
-//        int nconnects = MHMIxed->NConnects();
-//        for (int icon=0; icon<nconnects; icon++) {
-//            TPZConnect &connect = MHMIxed->ConnectVec()[icon];
-//            int lagrange = connect.LagrangeMultiplier();
-//            if (lagrange==3) {
-//                MHMIxed->ConnectVec()[icon].IncrementElConnected();
-//            }
-//            else{
-////                MHMIxed->ConnectVec()[icon].ResetElConnected();
-//            }
-//        }
-// Created condensed elements for the elements that have internal nodes
-        //                TPZCompMesh * cmeshaux = &MHMIxed.operator*();
+
         TPZCompMeshTools::CreatedCondensedElements(MHMIxed, false, false);
-        
+
        
         std::cout<<MHMIxed->NEquations()<<std::endl;
 }

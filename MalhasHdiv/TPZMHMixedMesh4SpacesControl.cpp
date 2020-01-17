@@ -25,6 +25,21 @@ void TPZMHMixedMesh4SpacesControl::BuildComputationalMesh(bool usersubstructure)
     CreateAverageFlux();
     CreateAveragePressure();
     
+    fCMesh->ComputeNodElCon();
+    int dimel = fCMesh->Dimension();
+    int64_t nels = fCMesh->NElements();
+    for (int64_t el =0; el<nels; el++) {
+        TPZCompEl *cel = fCMesh->Element(el);
+        if(!cel) continue;
+        TPZGeoEl *gel = cel->Reference();
+        if(!gel) continue;
+        if(gel->Dimension() != dimel) continue;
+        int nc = cel->NConnects();
+        cel->Connect(nc-1).IncrementElConnected();
+    }
+    
+    TPZCompMeshTools::CreatedCondensedElements(fCMesh.operator->(), false, false);
+    
    
     if(fNState > 1)
     {
