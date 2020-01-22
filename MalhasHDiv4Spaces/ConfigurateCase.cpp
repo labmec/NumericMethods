@@ -23,6 +23,14 @@ void PrintPoint(TPZVec<double> point){
     std::cout<<point[2]<<std::endl;
    
 }
+
+/**
+ * @brief Creates the computatinal Hdiv mesh
+ * @param gmesh: geometric mesh
+ * @param orderfine: order for the fine mesh
+ * @param ordercoarse: order fot the coarse mesh
+ * @return computatinal Hdiv mesh
+ */
 TPZCompMesh *ConfigurateCase::HDivMesh(TPZGeoMesh * gmesh, int orderfine, int ordercoarse){
     
     int dimension = gmesh->Dimension();         //Gets mesh dimension
@@ -50,7 +58,6 @@ TPZCompMesh *ConfigurateCase::HDivMesh(TPZGeoMesh * gmesh, int orderfine, int or
             }
         }
     }
-    
     
     cmesh->SetAllCreateFunctionsHDiv();
     cmesh->AutoBuild();
@@ -80,15 +87,23 @@ TPZCompMesh *ConfigurateCase::HDivMesh(TPZGeoMesh * gmesh, int orderfine, int or
     
     return cmesh;
     
-};
+}
+
+/**
+ * @brief Creates the discontinous mesh
+ * @param gmesh: geometric mesh
+ * @param order: order for the mesh
+ * @param lagrangemult: lagrange multiplier number
+ * @return computatinal discontinuos mesh
+ */
 TPZCompMesh *ConfigurateCase::DiscontinuousMesh(TPZGeoMesh * gmesh, int order, int lagrangemult){
-    int dimension = gmesh->Dimension();
+    int dim = gmesh->Dimension();
     int nvols = fsim_case.omega_ids.size();
     TPZCompMesh *cmesh = new TPZCompMesh(gmesh);
     
-    TPZFMatrix<STATE> val1(dimension,dimension,0.0),val2(dimension,1,0.0);
+    TPZFMatrix<STATE> val1(dim,dim,0.0),val2(dim,1,0.0);
     
-    cmesh->SetDimModel(dimension);
+    cmesh->SetDimModel(dim);
     cmesh->SetDefaultOrder(order);
     cmesh->SetAllCreateFunctionsDiscontinuous();
     
@@ -100,30 +115,27 @@ TPZCompMesh *ConfigurateCase::DiscontinuousMesh(TPZGeoMesh * gmesh, int order, i
     //Setting material for avg pressure and distributed flux
      std::set<int> matids;
     if (order == 0) {
-       
         for (int ivol=0; ivol < nvols; ivol++) {
             TPZNullMaterial * volume = new TPZNullMaterial(fsim_case.omega_ids[ivol]);
             cmesh->InsertMaterialObject(volume);
-            if (fsim_case.omega_dim[ivol] == dimension) {
+            if (fsim_case.omega_dim[ivol] == dim) {
                 matids.insert(fsim_case.omega_ids[ivol]);
             }
         }
-        
     }
     //Setting material for pressure
 
     if (order != 0) {
         
         for (int ivol=0; ivol < nvols; ivol++) {
-            TPZMixedDarcyFlow * volume = new TPZMixedDarcyFlow(fsim_case.omega_ids[ivol],dimension);
+            TPZMixedDarcyFlow * volume = new TPZMixedDarcyFlow(fsim_case.omega_ids[ivol],dim);
             volume->SetPermeability(fsim_case.permeabilities[ivol]);
             cmesh->InsertMaterialObject(volume);
-            if (fsim_case.omega_dim[ivol] == dimension) {
+            if (fsim_case.omega_dim[ivol] == dim) {
                 matids.insert(fsim_case.omega_ids[ivol]);
             }
         }
     }
-    
     
     cmesh->AutoBuild(matids);
     cmesh->InitializeBlock();
@@ -145,6 +157,13 @@ TPZCompMesh *ConfigurateCase::DiscontinuousMesh(TPZGeoMesh * gmesh, int order, i
     return cmesh;
 };
 
+/**
+ * @brief Creates the multiphysics computational mesh
+ * @param gmesh: geometric mesh
+ * @param order: order for the mesh
+ * @param lagrangemult: lagrange multiplier number
+ * @return computatinal discontinuos mesh
+ */
 TPZMultiphysicsCompMesh *ConfigurateCase::CreateMultCompMesh(){
     TPZVec<TPZCompMesh *> meshvec(4);
     
@@ -194,7 +213,7 @@ TPZMultiphysicsCompMesh *ConfigurateCase::CreateMultCompMesh(){
     TPZManVector<int,5> active_approx_spaces(4,1); 
    
     cmesh->BuildMultiphysicsSpace(active_approx_spaces,meshvec);
-    if (fsim_case.IsCondensedQ){             //Asks if you want to condesate the problem
+    if (fsim_case.IsCondensedQ){      //Asks if you want to condesate the problem
         cmesh->ComputeNodElCon();
         int dim = cmesh->Dimension();
         int64_t nel = cmesh->NElements();
@@ -218,6 +237,11 @@ TPZMultiphysicsCompMesh *ConfigurateCase::CreateMultCompMesh(){
     
 };
 
+/**
+ * @brief Creates the analysis for the problem
+ * @param mcmesh: multiphysics computational mesh
+ * @return The analysis
+ */
 TPZAnalysis *ConfigurateCase::CreateAnalysis(TPZMultiphysicsCompMesh *mcmesh){
     
     TPZAnalysis *an = new TPZAnalysis(mcmesh);
@@ -242,6 +266,16 @@ TPZAnalysis *ConfigurateCase::CreateAnalysis(TPZMultiphysicsCompMesh *mcmesh){
     return an;
 }
 
+/**
+ * @brief Creates a uniform mesh
+ * @param nx: partitions number on x
+ * @param L: length
+ * @param ny: partitions number on y
+ * @param h: height
+ * @param nz:partitions number on z
+ * @param w: width
+ * @return The analysis
+ */
 TPZGeoMesh * ConfigurateCase::CreateUniformMesh(int nx, REAL L, int ny, REAL h, int nz, REAL w){
     
     TPZVec<int> nels;   //Creating the elements object
@@ -334,6 +368,12 @@ TPZGeoMesh * ConfigurateCase::CreateUniformMesh(int nx, REAL L, int ny, REAL h, 
     return gmesh;
     
 }
+
+/**
+ * @brief Creates a uniform mesh
+
+ * @return The analysis
+ */
 TPZAutoPointer<TPZMHMixedMeshControl> ConfigurateCase::CreateMHMMixedMesh2Spaces(){
     TPZGeoMesh *gmeshcoarse = CreateGeowithRefPattern();
     TPZAutoPointer<TPZGeoMesh> gmeshauto = gmeshcoarse;
@@ -373,7 +413,6 @@ TPZAutoPointer<TPZMHMixedMeshControl> ConfigurateCase::CreateMHMMixedMesh2Spaces
         std::ofstream filemesh("despuesInterfaces.txt");
         mhm->Print(filemesh);
     }
-    //        TPZVTKGeoMesh::PrintGMeshVTK(meshcontrol.GMesh(), filemesh);
     int rrr = 0;
     mhm->DivideSkeletonElements(rrr);
     mhm->DivideBoundarySkeletonElements();
@@ -384,14 +423,10 @@ TPZAutoPointer<TPZMHMixedMeshControl> ConfigurateCase::CreateMHMMixedMesh2Spaces
     
     bool substructure = true;
     
-    //        std::map<int,std::pair<TPZGeoElSide,TPZGeoElSide>> test;
-    
-    
-    
     mhm->BuildComputationalMesh(substructure);
     
     
-    if(1)
+    if(0)
     {
         std::ofstream file("GMeshControl.vtk");
         TPZVTKGeoMesh::PrintGMeshVTK(mhm->CMesh()->Reference(), file);
@@ -420,13 +455,12 @@ TPZAutoPointer<TPZMHMixedMeshControl> ConfigurateCase::CreateMHMMixedMesh2Spaces
     
     std::cout << "Number of equations MHMixed " << mhm->CMesh()->NEquations() << std::endl;
     
-    
-    
-    {
+    if (0) {
         TPZCompMesh *MixedMesh = mhm->CMesh().operator->();
         std::ofstream multcmesh("multcompmesh.txt");
         MixedMesh->Print(multcmesh);
     }
+    
     
     return mhm;
     
@@ -440,7 +474,7 @@ TPZAutoPointer<TPZMHMixedMesh4SpacesControl> ConfigurateCase::CreateMHMMixedMesh
     
     
     mhm->DefinePartitionbyCoarseIndices(coarseindices);
-    // Create just geometric elements
+    // Create geometric elements
     
     {
         std::set<int> matids;
@@ -459,19 +493,17 @@ TPZAutoPointer<TPZMHMixedMesh4SpacesControl> ConfigurateCase::CreateMHMMixedMesh
     
     InsertMaterialObjects(*mhm);
     
-    
     mhm->SetInternalPOrder(1);
     mhm->SetSkeletonPOrder(1);
     
-    {
-        std::ofstream filemesh("despuesInterfaces.txt");
+    if (0) {
+        std::ofstream filemesh("AfterInterface.txt");
         mhm->Print(filemesh);
     }
-    //        TPZVTKGeoMesh::PrintGMeshVTK(meshcontrol.GMesh(), filemesh);
-    int rrr = 0;
-    mhm->DivideSkeletonElements(rrr);
+
+    mhm->DivideSkeletonElements(0);
     mhm->DivideBoundarySkeletonElements();
-    {
+    if (0) {
         std::ofstream file_geo("geometry.txt");
         mhm->CMesh()->Reference()->Print(file_geo);
     }
@@ -481,9 +513,7 @@ TPZAutoPointer<TPZMHMixedMesh4SpacesControl> ConfigurateCase::CreateMHMMixedMesh
     mhm->BuildComputationalMesh(substructure);
     std::cout << "Number of equations MHMixed " << mhm->CMesh()->NEquations() << std::endl;
     
-    
-    
-    {
+    if (0) {
         TPZCompMesh *MixedMesh = mhm->CMesh().operator->();
         std::ofstream multcmesh("multcompmesh.txt");
         MixedMesh->Print(multcmesh);
@@ -593,11 +623,11 @@ TPZGeoMesh* ConfigurateCase::CreateGeowithRefPattern(){
     gmesh2->Element(1)->Divide(sons);
     gmesh2->BuildConnectivity();
 
-    
-    {
+    if (0) {
         std::ofstream file2("REFPatternBeforeBC.vtk");
-        TPZVTKGeoMesh::PrintGMeshVTK(gmesh2, file2);
-    }                           //Prints a VTK before adding the BC elements
+        TPZVTKGeoMesh::PrintGMeshVTK(gmesh2, file2); //Prints a VTK before adding the BC elements
+    }
+
     
     gmesh2->Element(0)->CreateBCGeoEl(4, -1);
     gmesh2->Element(0)->CreateBCGeoEl(6, -3);
@@ -613,12 +643,12 @@ TPZGeoMesh* ConfigurateCase::CreateGeowithRefPattern(){
     
     std::set<int> matids;
     matids.insert(-1);
-    //    matids.insert(1);
     
-    {
-    std::ofstream fileafter("REFPatternAfterBC.vtk");
-    TPZVTKGeoMesh::PrintGMeshVTK(gmesh2, fileafter);
-    }                           //Prints a VTK after adding the BC elements
+    if (0) {
+        std::ofstream fileafter("REFPatternAfterBC.vtk");
+        TPZVTKGeoMesh::PrintGMeshVTK(gmesh2, fileafter);  //Prints a VTK after adding the BC elements
+    }
+
     
     //Creates new lines to be children of the originals in order to generate the MHM mesh
     gmesh2->Element(6)->SetRefPattern(refpatline);
@@ -642,26 +672,15 @@ TPZGeoMesh* ConfigurateCase::CreateGeowithRefPattern(){
     gmesh2->Element(4)->SetMaterialId(2);
     gmesh2->Element(5)->SetMaterialId(2);
     
-    {
-    std::ofstream file("WithREFPattern.vtk");
-    TPZVTKGeoMesh::PrintGMeshVTK(gmesh2, file);
-    }                           //Prints a final VTK of the geometric mesh after all the addings
-    
-    //Printing geometric Quad Id -50 Sides 5 7  | -1   -1   0    |  | 1   -1   0    |  | -1   1   0
-    
-    
-//    for(int y=0; y<gmeshrefpattern->NNodes(); y++){
-//        std::cout<<"node: "<<y<<endl;
-//        for(int up=0; up<3; up++){
-//            std::cout<<gmeshrefpattern->NodeVec()[y].Coord(up);
-//            std::cout<<" |";
-//        }
-//        std::cout<<endl;
-//    }
-    
+    if (0) {
+        std::ofstream file("WithREFPattern.vtk");
+        TPZVTKGeoMesh::PrintGMeshVTK(gmesh2, file);   //Prints a final VTK of the geometric mesh after all the addings
+    }
     
     return gmesh2;
 }
+
+
 void ConfigurateCase::InsertMaterialObjects(TPZMHMeshControl &control)
 {
     TPZCompMesh &cmesh = control.CMesh();
@@ -693,48 +712,7 @@ void ConfigurateCase::InsertMaterialObjects(TPZMHMeshControl &control)
                 MixedFluxPressureCmesh->InsertMaterialObject(bc);
                 iterbc++;
             }
-            
         }
         iter++;
     }
-    
-    
-
-//        TPZMixedDarcyWithFourSpaces * mat_2 = new TPZMixedDarcyWithFourSpaces(2,dim);
-//        mat_2->SetPermeability(10000.); //cambiar para tener contraste de perm
-//        //    mat->SetForcingFunction(One);
-//        MixedFluxPressureCmesh->InsertMaterialObject(mat_2);
-////
-////    TPZMixedDarcyFlow * mat = new TPZMixedDarcyFlow(1,dim);
-////    mat->SetPermeability(1.);
-////    //    mat->SetForcingFunction(One);
-////    MixedFluxPressureCmesh->InsertMaterialObject(mat);
-////
-////    TPZMixedDarcyFlow * mat_2 = new TPZMixedDarcyFlow(2,dim);
-////    mat_2->SetPermeability(10000.); //cambiar para tener contraste de perm
-////    //    mat->SetForcingFunction(One);
-////    MixedFluxPressureCmesh->InsertMaterialObject(mat_2);
-//
-//
-//
-//    // Bc N
-//
-//    //    bcN->SetForcingFunction(0, force);
-//
-//
-//    bcN = mat->CreateBC(mat, -3, typeFlux, val1, val2Flux);
-//    //    bcN->SetForcingFunction(0, force);
-//
-//    MixedFluxPressureCmesh->InsertMaterialObject(bcN);
-//
-//    // Bc S
-//    TPZBndCond * bcS = mat->CreateBC(mat, -2, typeFlux, val1, val2Flux);
-//    MixedFluxPressureCmesh->InsertMaterialObject(bcS);
-//    bcS = mat->CreateBC(mat, -4, typeFlux, val1, val2Flux);
-//    MixedFluxPressureCmesh->InsertMaterialObject(bcS);
-//    TPZBndCond * bcIn = mat->CreateBC(mat, -5, typePressure, val1, val2Pressure);
-//    MixedFluxPressureCmesh->InsertMaterialObject(bcIn);
-//    TPZBndCond * bcOut = mat->CreateBC(mat, -6, typePressure, val1, val1Pressure);
-//    MixedFluxPressureCmesh->InsertMaterialObject(bcOut);
-    
 }

@@ -2,6 +2,7 @@
 #include "TPZMHMixedMesh4SpacesControl.h"
 #include "pzelementgroup.h"
 
+
 void TPZMHMixedMesh4SpacesControl::BuildComputationalMesh(bool usersubstructure){
     
     if (fpOrderInternal == 0 || fpOrderSkeleton == 0) {
@@ -520,24 +521,6 @@ void TPZMHMixedMesh4SpacesControl::GroupandCondenseElements()
         if (!subcmesh) {
             DebugStop();
         }
-        
-
-//        if (1) {             //Asks if you want to condesate the problem
-//            subcmesh->ComputeNodElCon();
-//            int dim = 2;
-//            int64_t nel = subcmesh->NElements();
-//            for (int64_t el =0; el<nel; el++) {
-//                TPZCompEl *cel = subcmesh->Element(el);
-//                if(!cel) continue;
-//                TPZGeoEl *gel = cel->Reference();
-//                if(!gel) continue;
-//                if(gel->Dimension() != dim) continue;
-//                int nc = cel->NConnects();
-//                cel->Connect(nc-1).IncrementElConnected();
-//            }
-//            // Created condensed elements for the elements that have internal nodes
-////            TPZCompMeshTools::CreatedCondensedElements(subcmesh, false, false);
-//        }
       
         TPZCompMeshTools::GroupElements(subcmesh);
         subcmesh->ComputeNodElCon();
@@ -554,24 +537,6 @@ void TPZMHMixedMesh4SpacesControl::GroupandCondenseElements()
 #endif
         // TODO: increment nelconnected of exterior connects
         bool keeplagrange = true;
-        
-        //
-  
-//        if (condense_equations_Q) {             //Asks if you want to condesate the problem
-//            MixedMesh_c->ComputeNodElCon();
-//            int dim = MixedMesh_c->Dimension();
-//            int64_t nel = MixedMesh_c->NElements();
-//            for (int64_t el =0; el<nel; el++) {
-//                TPZCompEl *cel = MixedMesh_c->Element(el);
-//                if(!cel) continue;
-//                TPZGeoEl *gel = cel->Reference();
-//                if(!gel) continue;
-//                if(gel->Dimension() != dim) continue;
-//                int nc = cel->NConnects();
-//                cel->Connect(nc-1).IncrementElConnected();
-//            }
-//            // Created condensed elements for the elements that have internal nodes
-//            TPZCompMeshTools::CreatedCondensedElements(MixedMesh_c, KeepOneLagrangian, KeepMatrix);
         
         int nel = subcmesh->NElements();
         for (int64_t el=0; el<nel; el++) {
