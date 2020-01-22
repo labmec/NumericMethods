@@ -114,7 +114,7 @@ endif()
 
 #add_subdirectory(Laberinto)
 #add_subdirectory(RibFrac)
-add_subdirectory(MalhasHdiv)
+add_subdirectory(MalhasHDiv4Spaces)
 
 #add_subdirectory(MonophasicDarcyTest)
 
