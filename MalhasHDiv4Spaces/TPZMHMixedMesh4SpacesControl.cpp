@@ -1,6 +1,9 @@
 
 #include "TPZMHMixedMesh4SpacesControl.h"
 #include "pzelementgroup.h"
+#include "pzelmat.h"
+#include "pzstrmatrix.h"
+#include "ConfigurateCase.h"
 
 /**
  * @brief Build Computational Mesh
@@ -526,6 +529,7 @@ void TPZMHMixedMesh4SpacesControl::GroupandCondenseElements()
     for (std::map<int64_t,int64_t>::iterator it=fMHMtoSubCMesh.begin(); it != fMHMtoSubCMesh.end(); it++) {
         TPZCompEl *cel = fCMesh->Element(it->second);
         TPZSubCompMesh *subcmesh = dynamic_cast<TPZSubCompMesh *>(cel);
+        
         if (!subcmesh) {
             DebugStop();
         }
@@ -534,7 +538,25 @@ void TPZMHMixedMesh4SpacesControl::GroupandCondenseElements()
         subcmesh->ComputeNodElCon();
         std::ofstream filehide("subcmesh1.txt");
         subcmesh->Print(filehide);
-
+        
+        // AQUI NACE EL PROBLEMA
+        bool shouldrenumber = false;
+        TPZAnalysis an_sub(subcmesh,shouldrenumber);
+        TPZSymetricSpStructMatrix strmat(subcmesh);
+        strmat.SetNumThreads(0);
+        an_sub.SetStructuralMatrix(strmat);
+        TPZStepSolver<STATE> step;
+        step.SetDirect(ELDLt);
+        an_sub.SetSolver(step);
+        std::cout << "Assembling submesh\n";
+        an_sub.Assemble();
+        std::ofstream filemate("MatrixSubmesh.txt");
+        an_sub.Solver().Matrix()->Print("EkSb",filemate,EMathematicaInput);
+        TPZElementMatrix ek;
+        TPZElementMatrix ef;
+        cel->CalcStiff(ek, ef);
+        // AQUI MUERE EL PROBLEMA
+        
 #ifdef LOG4CXX2
         if(logger->isDebugEnabled())
         {

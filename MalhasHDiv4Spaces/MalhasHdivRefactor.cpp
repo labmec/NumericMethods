@@ -22,7 +22,7 @@ int main(){
     TPZCompMesh* MHMIxed= mhmcontrol->CMesh().operator->();
     SimulationCase sim;
    
-    if (1) {
+    if (0) {
         std::ofstream filefinal("MHM_After.txt");
         MHMIxed->Print(filefinal);
         std::cout<<MHMIxed->NEquations()<<std::endl;
@@ -41,7 +41,6 @@ int main(){
     
     TPZSymetricSpStructMatrix strmat(MHMIxed);
     strmat.SetNumThreads(confi.GetSimulationCase().n_threads);
-    
     an_coarse.SetStructuralMatrix(strmat);
     TPZStepSolver<STATE> step;
     step.SetDirect(ELDLt);
