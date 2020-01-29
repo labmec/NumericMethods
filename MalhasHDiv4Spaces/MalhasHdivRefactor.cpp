@@ -14,16 +14,15 @@ int main(){
     
     ConfigurateCase confi;
     confi.SetSimulationCase(SimulationCase2DMHM());
-    confi.SetFineOrder(2);
-    confi.SetCoarseOrder(1);
-    bool isFourSpaces = false;
+//    confi.SetFineOrder(1);
+//    confi.SetCoarseOrder(1);
     
     TPZAutoPointer<TPZMHMixedMesh4SpacesControl> mhmcontrol = confi.CreateMHMMixedMesh4Spaces();
     
     TPZCompMesh* MHMIxed= mhmcontrol->CMesh().operator->();
     SimulationCase sim;
    
-    if (0) {
+    if (1) {
         std::ofstream filefinal("MHM_After.txt");
         MHMIxed->Print(filefinal);
         std::cout<<MHMIxed->NEquations()<<std::endl;
@@ -33,8 +32,8 @@ int main(){
         std::ofstream filepressureavg("pressuremhmavg_After.txt");
         mhmcontrol->GetMeshes()[0]->Print(fileflux);
         mhmcontrol->GetMeshes()[1]->Print(filepressure);
-//        mhmcontrol->GetMeshes()[2]->Print(filefluxavg);
-//        mhmcontrol->GetMeshes()[3]->Print(filepressureavg);
+        mhmcontrol->GetMeshes()[2]->Print(filefluxavg);
+        mhmcontrol->GetMeshes()[3]->Print(filepressureavg);
     }
 
     bool shouldrenumber = true;

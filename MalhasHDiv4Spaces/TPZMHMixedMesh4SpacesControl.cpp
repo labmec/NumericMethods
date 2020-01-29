@@ -2,17 +2,21 @@
 #include "TPZMHMixedMesh4SpacesControl.h"
 #include "pzelementgroup.h"
 
-
-void TPZMHMixedMesh4SpacesControl::BuildComputationalMesh(bool usersubstructure){
-    
+/**
+ * @brief Build Computational Mesh
+ * @param useSubstructure: wether use substructure
+ */
+void TPZMHMixedMesh4SpacesControl::BuildComputationalMesh(bool useSubstructure){
+    //A check for the polynomial order
     if (fpOrderInternal == 0 || fpOrderSkeleton == 0) {
         std::cout<<"Wrong polynomial order set"<<std::endl;
         DebugStop();
     }
-    InsertPeriferalMaterialObjects();
+    InsertPeriferalMaterialObjects();  // Insert BC objects that do not perform any actual computation
     CreateHDivMHMMesh();
     
     InsertPeriferalPressureMaterialObjects();
+    
     if(fNState > 1){
         fRotationMesh = new TPZCompMesh(fGMesh);
         InsertPeriferalRotationMaterialObjects();
@@ -25,9 +29,6 @@ void TPZMHMixedMesh4SpacesControl::BuildComputationalMesh(bool usersubstructure)
     CreatePressureMHMMesh();
     CreateAverageFlux();
     CreateAveragePressure();
-    
-   
-    
    
     if(fNState > 1)
     {
@@ -52,7 +53,7 @@ void TPZMHMixedMesh4SpacesControl::BuildComputationalMesh(bool usersubstructure)
     
     
     
-    if (usersubstructure) {
+    if (useSubstructure) {
         HideTheElements();
     }
   
@@ -78,6 +79,10 @@ void TPZMHMixedMesh4SpacesControl::BuildComputationalMesh(bool usersubstructure)
     }
 #endif
 }
+
+/**
+ * @brief Creates the HDiv Pressure 4 spaces MHM Mesh
+ */
 void TPZMHMixedMesh4SpacesControl::CreateHDivPressureMHMMesh()
 {
     TPZManVector<TPZCompMesh *,4 > cmeshes(4);
@@ -136,7 +141,7 @@ void TPZMHMixedMesh4SpacesControl::CreateHDivPressureMHMMesh()
     meshvector = cmeshes;
   
     
-    // populate the connect to subdomain data structure for the multiphysics mesh
+    // Populate the connects to subdomain data structure for the multiphysics mesh
     JoinSubdomains(meshvector, MixedFluxPressureCmesh);
     
     // Transferindo para a multifisica
@@ -163,7 +168,7 @@ void TPZMHMixedMesh4SpacesControl::CreateHDivPressureMHMMesh()
     MixedFluxPressureCmesh->CleanUpUnconnectedNodes();
     
 #ifdef PZDEBUG
-    if(0)
+    if(1)
     {
         std::ofstream out("multiphysics.txt");
         MixedFluxPressureCmesh->Print(out);
@@ -171,9 +176,11 @@ void TPZMHMixedMesh4SpacesControl::CreateHDivPressureMHMMesh()
 #endif
     
     return;
-    
 }
 
+/**
+ * @brief Creates Distributed Flux mesh
+ */
 void TPZMHMixedMesh4SpacesControl::CreateAverageFlux()
 {
     TPZGeoMesh * gmesh = fGMesh.operator->();
@@ -181,23 +188,24 @@ void TPZMHMixedMesh4SpacesControl::CreateAverageFlux()
     TPZCompMesh * cmeshtemp = new TPZCompMesh(gmesh);
     fcmeshFluxAverg = cmeshtemp;
     
-    //The pressure mesh should be empty when calling this method
+    //The distributed flux mesh should be empty when calling this method
     int64_t nskeletonconnects = fcmeshFluxAverg->NConnects();
-    if(nskeletonconnects != 0){
+    if(nskeletonconnects != 0){     //Check that it is empty
         DebugStop();
     }
 
-    // create and organize the pressure mesh
-    // the pressure mesh is composed of discontinuous H1 elements
+    // create and organize the distributed flux mesh
     TPZCompMesh * cmeshfluxavg = fcmeshFluxAverg.operator->();
     gmesh->ResetReference();
-    cmeshfluxavg->SetName("PressureMeshAverage");
+    cmeshfluxavg->SetName("DistributedFlux");
     cmeshfluxavg->SetDimModel(gmesh->Dimension());
+    //
     cmeshfluxavg->SetAllCreateFunctionsDiscontinuous(); //AQUI
+    //
     cmeshfluxavg->ApproxSpace().CreateDisconnectedElements(true);
     cmeshfluxavg->SetDefaultOrder(0);
     
-//    generate elements for all material ids of meshdim
+//    generate elements for all material ids of mesh dim
     std::set<int> matids;
 
     TPZNullMaterial * volume = new TPZNullMaterial(1);
@@ -211,7 +219,7 @@ void TPZMHMixedMesh4SpacesControl::CreateAverageFlux()
     
     if(0)
     {
-        std::ofstream out("PressureAVERAGEMesh.txt");
+        std::ofstream out("DistributedFluxMesh.txt");
         cmeshfluxavg->Print(out);
     }
     
@@ -265,6 +273,10 @@ void TPZMHMixedMesh4SpacesControl::CreateAverageFlux()
     
     return;
 }
+
+/**
+ * @brief Creates Average Pressure mesh
+ */
 void TPZMHMixedMesh4SpacesControl::CreateAveragePressure()
 {
     TPZGeoMesh * gmesh = fGMesh.operator->();
@@ -272,6 +284,7 @@ void TPZMHMixedMesh4SpacesControl::CreateAveragePressure()
     gmesh->ResetReference();
     TPZCompMesh * cmeshtemp = new TPZCompMesh(gmesh);
     fcmeshPressureAverg = cmeshtemp;
+    
     // the pressure mesh should be empty when calling this method
     int64_t nskeletonconnects = fcmeshPressureAverg->NConnects();
     if(nskeletonconnects != 0){
@@ -287,7 +300,7 @@ void TPZMHMixedMesh4SpacesControl::CreateAveragePressure()
     cmeshpressureavr->SetAllCreateFunctionsDiscontinuous(); //AQUI
     cmeshpressureavr->ApproxSpace().CreateDisconnectedElements(true);
     cmeshpressureavr->SetDefaultOrder(0);
-    int meshdim = cmeshpressureavr->Dimension();
+    
     // generate elements for all material ids of meshdim
     std::set<int> matids;
     //    for (auto it:fMaterialIds) {
@@ -355,21 +368,20 @@ void TPZMHMixedMesh4SpacesControl::CreateAveragePressure()
         if (domain == -1) {
             DebugStop();
         }
-#endif//
-       
-        
-        
-        //
+#endif
         
         SetSubdomain(cel, domain);
     }
-    
-  
-    
+
     return;
 }
+
+/**
+ * @brief Builds the MultiPhysics Mesh
+ */
 void TPZMHMixedMesh4SpacesControl::BuildMultiPhysicsMesh()
 {
+    //Checks that the mesh is empty before creation
     if (fCMesh->NElements() != 0) {
         std::cout<<"The mesh has to be empty to build it at this stage"<<std::endl;
         DebugStop();
@@ -449,14 +461,13 @@ void TPZMHMixedMesh4SpacesControl::BuildMultiPhysicsMesh()
         LOGPZ_DEBUG(logger, sout.str())
     }
 #endif
-    
 
     mphysics->BuildMultiphysicsSpace(meshvec,gelindexes);
-    
-  
-    
 }
 
+/**
+ * @brief Hide The Elements, allocate the connects in the submeshes and condense
+ */
 void TPZMHMixedMesh4SpacesControl::HideTheElements()
 {
    
@@ -464,16 +475,11 @@ void TPZMHMixedMesh4SpacesControl::HideTheElements()
     if (fHybridize) {
         KeepOneLagrangian = false;
     }
-    //
-   
-
-    //
     
     typedef std::set<int64_t> TCompIndexes;
     std::map<int64_t, TCompIndexes> ElementGroups;
     TPZGeoMesh *gmesh = fCMesh->Reference();
     gmesh->ResetReference();
-    int dim = gmesh->Dimension();
     fCMesh->LoadReferences();
     int64_t nel = fCMesh->NElements();
     for (int64_t el=0; el<nel; el++) {
@@ -507,11 +513,13 @@ void TPZMHMixedMesh4SpacesControl::HideTheElements()
     fCMesh->CleanUpUnconnectedNodes();
    
     GroupandCondenseElements();
-   
     
     std::cout << "Finished substructuring\n";
 }
 
+/**
+ * @brief Group and Condense Elements
+ */
 void TPZMHMixedMesh4SpacesControl::GroupandCondenseElements()
 {
     
@@ -535,8 +543,7 @@ void TPZMHMixedMesh4SpacesControl::GroupandCondenseElements()
             LOGPZ_DEBUG(logger, sout.str())
         }
 #endif
-        // TODO: increment nelconnected of exterior connects
-        bool keeplagrange = true;
+        // Increment nelconnected of exterior connects
         
         int nel = subcmesh->NElements();
         for (int64_t el=0; el<nel; el++) {
@@ -550,12 +557,13 @@ void TPZMHMixedMesh4SpacesControl::GroupandCondenseElements()
             
             int lagrangemult = connect.LagrangeMultiplier();
             std::cout<<lagrangemult<<std::endl;
+            //Increment the number of connected elements for the avg pressure in order to not condense them
             if (lagrangemult==3) {
                 connect.IncrementElConnected();
             }
         }
         }
-        //
+        
         TPZCompMeshTools::CreatedCondensedElements(subcmesh, false);
         subcmesh->CleanUpUnconnectedNodes();
       
@@ -573,7 +581,14 @@ void TPZMHMixedMesh4SpacesControl::GroupandCondenseElements()
         subcmesh->SetAnalysisSkyline(numthreads, preconditioned, guiInterface);
     }
 }
-/// Put the element set into a subcompmesh and make the connects internal
+
+/**
+ * @brief Puts the element set into a subcompmesh and make the connects internal
+ * @param cmesh: Computational mesh
+ * @param elindices: pointer with the Element indices
+ * @param indices: pointer with the Element indices
+ * @param KeepOneLagrangian: wether keep the one lagrangian or not
+ */
 void TPZMHMixedMesh4SpacesControl::PutinSubmeshes(TPZCompMesh *cmesh, std::map<int64_t,std::set<int64_t> >&elindices, std::map<int64_t,int64_t> &indices, bool KeepOneLagrangian)
 
 {
