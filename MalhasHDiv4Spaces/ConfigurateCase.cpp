@@ -71,7 +71,7 @@ TPZCompMesh *ConfigurateCase::HDivMesh(TPZGeoMesh * gmesh, int orderfine, int or
                 DebugStop();
             };
             TPZGeoEl *gel = intel->Reference();
-            intel->SetSideOrder(gel->NSides()-1, ordercoarse);
+            intel->SetSideOrder(gel->NSides()-1, orderfine);
         }
         cmesh->ExpandSolution();
     
@@ -164,8 +164,9 @@ TPZCompMesh *ConfigurateCase::DiscontinuousMesh(TPZGeoMesh * gmesh, int order, i
  */
 TPZMultiphysicsCompMesh *ConfigurateCase::CreateMultCompMesh(){
     TPZVec<TPZCompMesh *> meshvec(4);
-//    TPZGeoMesh *gmesh_fine = CreateGeowithRefPattern();
     
+    
+    m_gmesh=CreateGeowithRefPattern();
     int orderfine = m_fineorder;
     int ordercoarse = m_coarseorder;
     int dimension = m_gmesh->Dimension();
@@ -225,7 +226,7 @@ TPZMultiphysicsCompMesh *ConfigurateCase::CreateMultCompMesh(){
             cel->Connect(nc-1).IncrementElConnected();  //Increment avg pressure connect in order to not condense
         }
         
-        TPZCompMeshTools::CreatedCondensedElements(cmesh, fsim_case.KeepOneLagrangianQ, fsim_case.KeepMatrixQ);
+TPZCompMeshTools::CreatedCondensedElements(cmesh, fsim_case.KeepOneLagrangianQ, fsim_case.KeepMatrixQ);
         
         if (0) {
             std::ofstream filePrint("MixedHdiv.txt");

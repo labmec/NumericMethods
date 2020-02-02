@@ -19,26 +19,26 @@ int main(){
 //    confi.SetFineOrder(1);
 //    confi.SetCoarseOrder(1);
     
-    TPZAutoPointer<TPZMHMixedMesh4SpacesControl> mhmcontrol = confi.CreateMHMMixedMesh4Spaces();
+//    TPZAutoPointer<TPZMHMixedMesh4SpacesControl> mhmcontrol = confi.CreateMHMMixedMesh4Spaces();
     TPZMultiphysicsCompMesh *nomhmcontrol = confi_nomhm.CreateMultCompMesh();
 //
-    TPZCompMesh* MHMIxed= mhmcontrol->CMesh().operator->();
+    TPZCompMesh* MHMIxed= nomhmcontrol;
 //    TPZCompMesh* MIxed= nomhmcontrol->
     SimulationCase sim;
    
-    if (0) {
-        std::ofstream filefinal("MHM_After.txt");
-        MHMIxed->Print(filefinal);
-        std::cout<<MHMIxed->NEquations()<<std::endl;
-        std::ofstream fileflux("fluxmhm_After.txt");
-        std::ofstream filepressure("pressuremhm_After.txt");
-        std::ofstream filefluxavg("fluxmhmavg_After.txt");
-        std::ofstream filepressureavg("pressuremhmavg_After.txt");
-        mhmcontrol->GetMeshes()[0]->Print(fileflux);
-        mhmcontrol->GetMeshes()[1]->Print(filepressure);
-        mhmcontrol->GetMeshes()[2]->Print(filefluxavg);
-        mhmcontrol->GetMeshes()[3]->Print(filepressureavg);
-    }
+//    if (0) {
+//        std::ofstream filefinal("MHM_After.txt");
+//        MHMIxed->Print(filefinal);
+//        std::cout<<MHMIxed->NEquations()<<std::endl;
+//        std::ofstream fileflux("fluxmhm_After.txt");
+//        std::ofstream filepressure("pressuremhm_After.txt");
+//        std::ofstream filefluxavg("fluxmhmavg_After.txt");
+//        std::ofstream filepressureavg("pressuremhmavg_After.txt");
+//        mhmcontrol->GetMeshes()[0]->Print(fileflux);
+//        mhmcontrol->GetMeshes()[1]->Print(filepressure);
+//        mhmcontrol->GetMeshes()[2]->Print(filefluxavg);
+//        mhmcontrol->GetMeshes()[3]->Print(filepressureavg);
+//    }
 
     bool shouldrenumber = true;
     
@@ -218,7 +218,9 @@ SimulationCase SimulationCase2D(){
     sim.omega_ids.push_back(1);
     sim.omega_dim.push_back(2);
     sim.permeabilities.push_back(1.0);
-    
+    sim.omega_ids.push_back(2);
+    sim.omega_dim.push_back(2);
+    sim.permeabilities.push_back(1.0);
     
     int bc_non_flux = -1;
     int bc_inlet  = -2;
