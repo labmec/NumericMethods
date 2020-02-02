@@ -525,37 +525,78 @@ void TPZMHMixedMesh4SpacesControl::HideTheElements()
  */
 void TPZMHMixedMesh4SpacesControl::GroupandCondenseElements()
 {
-    
+    int el = 1;
+    int nels = fCMesh->NElements();
     for (std::map<int64_t,int64_t>::iterator it=fMHMtoSubCMesh.begin(); it != fMHMtoSubCMesh.end(); it++) {
+//    for (int el=0; el<nels; el++) {
         TPZCompEl *cel = fCMesh->Element(it->second);
         TPZSubCompMesh *subcmesh = dynamic_cast<TPZSubCompMesh *>(cel);
-        
         if (!subcmesh) {
-            DebugStop();
+//            DebugStop();
+            continue;
         }
-      
-        TPZCompMeshTools::GroupElements(subcmesh);
-        subcmesh->ComputeNodElCon();
-        std::ofstream filehide("subcmesh1.txt");
-        subcmesh->Print(filehide);
-        
-        // AQUI NACE EL PROBLEMA
-        bool shouldrenumber = false;
-        TPZAnalysis an_sub(subcmesh,shouldrenumber);
-        TPZSymetricSpStructMatrix strmat(subcmesh);
-        strmat.SetNumThreads(0);
-        an_sub.SetStructuralMatrix(strmat);
-        TPZStepSolver<STATE> step;
-        step.SetDirect(ELDLt);
-        an_sub.SetSolver(step);
-        std::cout << "Assembling submesh\n";
-        an_sub.Assemble();
-        std::ofstream filemate("MatrixSubmesh.txt");
-        an_sub.Solver().Matrix()->Print("EkSb",filemate,EMathematicaInput);
         TPZElementMatrix ek;
         TPZElementMatrix ef;
-        cel->CalcStiff(ek, ef);
-        // AQUI MUERE EL PROBLEMA
+        TPZCompMeshTools::GroupElements(subcmesh);
+        subcmesh->ComputeNodElCon();
+//        std::ofstream filehide("subcmesh1.txt");
+//        subcmesh->Print(filehide);
+//        std::stringstream sout;
+//        sout << "submesh_" << n << ".txt";
+//        std::ofstream filexx(sout.str());
+//        subcmesh->Print(filexx);
+        //Prints the submeshes (txt, vtk)
+        if (1) {
+                std::stringstream sout;
+                std::stringstream sout2;
+                sout << "submesh_" << el << ".txt";
+                std::ofstream filehide(sout.str());
+                sout2 << "submesh_" << el << ".vtk";
+                std::ofstream file(sout2.str());
+                TPZVTKGeoMesh::PrintCMeshVTK(subcmesh, file,true);
+                subcmesh->Print(filehide);
+            el++;
+        }
+        //End
+       
+//        TPZAutoPointer<TPZGuiInterface> guiInter = new TPZGuiInterface;
+//        bool shouldrenumber = true;
+//        subcmesh->SetAnalysisSkyline(0,1, guiInter);
+//        subcmesh->MakeAllInternal();
+//        subcmesh->Assemble();
+//        TPZCompMesh *csubmesh = dynamic_cast<TPZCompMesh *>(subcmesh);
+//        TPZAnalysis an_sub(subcmesh,shouldrenumber);
+//        TPZSymetricSpStructMatrix strmat(subcmesh);
+//        strmat.SetNumThreads(0);
+//
+//        an_sub.SetStructuralMatrix(strmat);
+//        TPZStepSolver<STATE> step;
+//        step.SetDirect(ELDLt);
+//        an_sub.SetSolver(step);
+//        an_sub.Assemble();
+//        std::ofstream file_sub("MatrixSubmesh.txt");
+//        an_sub.Solver().Matrix()->Print("EkSm",file_sub,EMathematicaInput);
+        
+//        subcmesh->Analysis();
+//        subcmesh->CalcStiff(ek, ef);
+        
+//        // AQUI NACE EL PROBLEMA
+//        bool shouldrenumber = false;
+//        TPZAnalysis an_sub(subcmesh,shouldrenumber);
+//        TPZSymetricSpStructMatrix strmat(subcmesh);
+//        strmat.SetNumThreads(0);
+//        an_sub.SetStructuralMatrix(strmat);
+//        TPZStepSolver<STATE> step;
+//        step.SetDirect(ELDLt);
+//        an_sub.SetSolver(step);
+//        std::cout << "Assembling submesh\n";
+//        an_sub.Assemble();
+//        std::ofstream filemate("MatrixSubmesh.txt");
+//        an_sub.Solver().Matrix()->Print("EkSb",filemate,EMathematicaInput);
+//        TPZElementMatrix ek;
+//        TPZElementMatrix ef;
+//        cel->CalcStiff(ek, ef);
+//        // AQUI MUERE EL PROBLEMA
         
 #ifdef LOG4CXX2
         if(logger->isDebugEnabled())
@@ -573,17 +614,16 @@ void TPZMHMixedMesh4SpacesControl::GroupandCondenseElements()
             if (!cel) {
                 continue;
             }
-        int nconnects = cel->NConnects();
-        for (int icon=0; icon<nconnects; icon++) {
-            TPZConnect &connect = cel->Connect(icon);
-            
-            int lagrangemult = connect.LagrangeMultiplier();
-            std::cout<<lagrangemult<<std::endl;
-            //Increment the number of connected elements for the avg pressure in order to not condense them
-            if (lagrangemult==3) {
-                connect.IncrementElConnected();
+            int nconnects = cel->NConnects();
+            for (int icon=0; icon<nconnects; icon++) {
+                TPZConnect &connect = cel->Connect(icon);
+                
+                int lagrangemult = connect.LagrangeMultiplier();
+                //Increment the number of connected elements for the avg pressure in order to not condense them
+                if (lagrangemult==3) {
+                    connect.IncrementElConnected();
+                }
             }
-        }
         }
         
         TPZCompMeshTools::CreatedCondensedElements(subcmesh, false);
@@ -601,6 +641,8 @@ void TPZMHMixedMesh4SpacesControl::GroupandCondenseElements()
 #endif
         TPZAutoPointer<TPZGuiInterface> guiInterface;
         subcmesh->SetAnalysisSkyline(numthreads, preconditioned, guiInterface);
+        std::ofstream filehide2("subcmeshAfter.txt");
+        subcmesh->Print(filehide2);
     }
 }
 

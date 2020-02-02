@@ -164,6 +164,7 @@ TPZCompMesh *ConfigurateCase::DiscontinuousMesh(TPZGeoMesh * gmesh, int order, i
  */
 TPZMultiphysicsCompMesh *ConfigurateCase::CreateMultCompMesh(){
     TPZVec<TPZCompMesh *> meshvec(4);
+//    TPZGeoMesh *gmesh_fine = CreateGeowithRefPattern();
     
     int orderfine = m_fineorder;
     int ordercoarse = m_coarseorder;
@@ -221,7 +222,7 @@ TPZMultiphysicsCompMesh *ConfigurateCase::CreateMultCompMesh(){
             if(!gel) continue;
             if(gel->Dimension() != dim) continue;
             int nc = cel->NConnects();
-            cel->Connect(nc-1).IncrementElConnected();  //Increment avg pressure connect in order to not condense it
+            cel->Connect(nc-1).IncrementElConnected();  //Increment avg pressure connect in order to not condense
         }
         
         TPZCompMeshTools::CreatedCondensedElements(cmesh, fsim_case.KeepOneLagrangianQ, fsim_case.KeepMatrixQ);

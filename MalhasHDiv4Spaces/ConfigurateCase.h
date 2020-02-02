@@ -22,12 +22,7 @@
 #include <TPZRefPattern.h>
 
 #include "TPZMaterial.h"
-//#include "pzelasmat.h"
-//#include "pzlog.h"
 #include "pzgengrid.h"
-
-//#include <time.h>
-//#include <stdio.h>
 
 #include <math.h>
 
@@ -44,7 +39,6 @@
 #include "TPZVTKGeoMesh.h"
 #include "TPZExtendGridDimension.h"
 
-//#include "TPZMatLaplacian.h"
 #include "pzpoisson3d.h"
 #include "TPZNullMaterial.h"
 #include "pzbndcond.h"
@@ -81,7 +75,7 @@
 class ConfigurateCase {
     TPZGeoMesh *m_gmesh;
     SimulationCase fsim_case;
-    int m_fineorder = 1;
+    int m_fineorder = 2;
     int m_coarseorder = 1;
     public:
     

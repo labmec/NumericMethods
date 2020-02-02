@@ -13,13 +13,17 @@ SimulationCase SimulationCase2D();
 int main(){
     
     ConfigurateCase confi;
+    ConfigurateCase confi_nomhm;
     confi.SetSimulationCase(SimulationCase2DMHM());
+    confi_nomhm.SetSimulationCase(SimulationCase2D());
 //    confi.SetFineOrder(1);
 //    confi.SetCoarseOrder(1);
     
     TPZAutoPointer<TPZMHMixedMesh4SpacesControl> mhmcontrol = confi.CreateMHMMixedMesh4Spaces();
-    
+    TPZMultiphysicsCompMesh *nomhmcontrol = confi_nomhm.CreateMultCompMesh();
+//
     TPZCompMesh* MHMIxed= mhmcontrol->CMesh().operator->();
+//    TPZCompMesh* MIxed= nomhmcontrol->
     SimulationCase sim;
    
     if (0) {
@@ -37,8 +41,8 @@ int main(){
     }
 
     bool shouldrenumber = true;
-    TPZAnalysis an_coarse(MHMIxed,shouldrenumber);
     
+    TPZAnalysis an_coarse(MHMIxed,shouldrenumber);
     TPZSymetricSpStructMatrix strmat(MHMIxed);
     strmat.SetNumThreads(confi.GetSimulationCase().n_threads);
     an_coarse.SetStructuralMatrix(strmat);
@@ -49,6 +53,66 @@ int main(){
     an_coarse.Assemble();
     std::ofstream filemate("MatrixCoarse.txt");
     an_coarse.Solver().Matrix()->Print("EkRs",filemate,EMathematicaInput);
+    
+
+
+//    MHMIxed->Reference()->ResetReference();
+//    TPZGeoMesh *gmesh = MHMIxed->Reference();
+//    MHMIxed->LoadReferences();
+//    int64_t numgel = gmesh->NElements();
+//    TPZVec<TPZSubCompMesh *> ReferredMesh(numgel,0);
+//    
+//    int nels = MHMIxed->NElements();
+//    int dim = gmesh->Dimension();
+//    int mesh = 1;
+//        for(int64_t el=0; el<numgel; el++)
+//        {
+//            TPZGeoEl *gel = gmesh->Element(el);
+//            if(!gel) continue;
+//            TPZCompEl *cel = gel->Reference();
+//            if(!cel) continue;
+//            TPZCompMesh *mesh = cel->Mesh();
+//            TPZSubCompMesh *ref = dynamic_cast<TPZSubCompMesh *>(mesh);
+//            ReferredMesh[el] = ref;
+//            TPZSubCompMesh *submesh = ReferredMesh[gel->Index()];
+//            
+//            TPZElementMatrix ek;
+//            TPZElementMatrix ef;
+//            submesh->CalcStiff(ek, ef);
+//
+//            ef.Print(std::cout);
+//            ek.Print(std::cout);
+//            
+//            std::stringstream sout;
+//            sout << "submesh_" << mesh << ".txt";
+//            std::ofstream filexx(sout.str());
+//            submesh->Print(filexx);
+//            
+//            std::cout<<el<<std::endl;
+//            mesh = mesh +1;
+//        }
+    
+    
+    
+//    int ms=0;
+//    for (int n=0;n<nels;n++) {
+//        TPZCompEl *cel = MHMIxed->Element(n);
+//        TPZSubCompMesh *subcmesh = dynamic_cast<TPZSubCompMesh *>(cel);
+//        if (!subcmesh) {
+//            continue;
+//        }
+//        if (n==12) {
+//            continue;
+//        }
+//        TPZElementMatrix ek;
+//        TPZElementMatrix ef;
+//        std::ofstream filehide("subcmeshpablo.txt");
+//        subcmesh->Print(filehide);
+//        subcmesh->CalcStiff(ek, ef);
+//        ef.Print(std::cout);
+//        ek.Print(std::cout);
+//        ms=ms+1;
+//        }
     
     std::cout << "Solving\n";
     an_coarse.Solve();
