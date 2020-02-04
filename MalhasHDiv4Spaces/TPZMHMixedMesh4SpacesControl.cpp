@@ -697,3 +697,148 @@ void TPZMHMixedMesh4SpacesControl::PutinSubmeshes(TPZCompMesh *cmesh, std::map<i
         subcmesh->MakeAllInternal();
     }
 }
+int64_t TPZMHMixedMesh4SpacesControl::WhichSubdomain(TPZCompEl *cel)
+{
+    int ncon = cel->NConnects();
+    std::set<int64_t> domains;
+    TPZCompMesh *cmesh = cel->Mesh();
+    TPZManVector<int64_t> &cvec = fConnectToSubDomainIdentifier[cmesh];
+    for (int ic=0; ic<ncon; ic++)
+    {
+        int64_t cindex = cel->ConnectIndex(ic);
+        if (cvec[cindex] != -1) {
+            domains.insert(cvec[cindex]);
+        }
+    }
+    // if the element has connects in two different subdomains then something is wrong
+    if (domains.size() > 1) {
+        for (int ic=0; ic<ncon; ic++) {
+            int64_t cindex = cel->ConnectIndex(ic);
+            std::cout << cindex << "|" << cvec[cindex] << " ";
+        }
+        std::cout << std::endl;
+        DebugStop();
+    }
+    if (domains.size() ==0) {
+        return -1;
+    }
+    int64_t domain = *domains.begin();
+    return domain;
+}
+
+void TPZMHMixedMesh4SpacesControl::SubStructure()
+{
+    // for each connect index, the submesh index
+    std::map<int64_t, int64_t > connectdest;
+    // for each coarse geometric index, a subcompmesh
+    std::map<int64_t, TPZSubCompMesh *> submeshes;
+    std::map<int64_t,int64_t>::iterator it = fMHMtoSubCMesh.begin();
+    
+    // create the submeshes
+    while (it != fMHMtoSubCMesh.end()) {
+        int64_t index;
+        TPZSubCompMesh *submesh = new TPZSubCompMesh(fCMesh,index);
+        submeshes[it->first] = submesh;
+        it++;
+    }
+    for (std::map<int64_t, TPZSubCompMesh *>::iterator it = submeshes.begin(); it != submeshes.end(); it++) {
+        fMHMtoSubCMesh[it->first] = it->second->Index();
+    }
+    
+    fGMesh->ResetReference();
+    fCMesh->LoadReferences();
+    
+    int64_t nel = fCMesh->NElements();
+    for (int64_t el=0; el<nel; el++)
+    {
+        TPZCompEl *cel = fCMesh->Element(el);
+        if(!cel) continue;
+        if (dynamic_cast<TPZSubCompMesh *>(cel)) {
+            continue;
+        }
+        int64_t domain = WhichSubdomain(cel);
+        
+        if (domain == -1) {
+            continue;
+        }
+        if (submeshes.find(domain) == submeshes.end()) {
+            DebugStop();
+        }
+        submeshes[domain]->TransferElement(fCMesh.operator->(), cel->Index());
+#ifdef LOG4CXX
+        if (logger->isDebugEnabled()) {
+            std::stringstream sout;
+            sout << "Transferring element index " << cel->Index() << " geometric index ";
+            TPZGeoEl *gel = cel->Reference();
+            if (gel) {
+                sout << gel->Index();
+            }
+            LOGPZ_DEBUG(logger, sout.str())
+        }
+#endif
+    }
+    fCMesh->ComputeNodElCon();
+    
+    
+    std::map<int64_t, TPZSubCompMesh *>::iterator itsub = submeshes.begin();
+    while (itsub != submeshes.end()) {
+        TPZSubCompMesh *submesh = itsub->second;
+        int nc = submesh->NConnects();
+        std::set<int64_t> internals;
+        // put all connects with one element connection internal in the submesh
+        for (int ic=0; ic<nc; ic++) {
+            int64_t connectindex = submesh->ConnectIndex(ic);
+            TPZConnect &c = submesh->Connect(ic);
+            int lagrange = c.LagrangeMultiplier();
+            if (c.NElConnected() >1) {
+                continue;
+            }
+            bool makeinternal = false;
+            // if hybridizing all internal connects can be condensed
+            if (fHybridize) {
+                makeinternal = true;
+            }
+            else if (lagrange < 3) {
+                makeinternal = true;
+            }
+            int64_t internal = submesh->InternalIndex(connectindex);
+            if (makeinternal)
+            {
+                internals.insert(internal);
+            }
+            else
+            {
+                c.IncrementElConnected();
+#ifdef PZDEBUG
+                std::cout << "For subdomain " << itsub->first << " connect index " << connectindex << " left external as lagrange multiplier\n";
+#endif
+            }
+        }
+        submesh->MakeAllInternal();
+        //        for (std::set<int64_t>::iterator it = internals.begin(); it != internals.end(); it++) {
+        //            submesh->MakeInternal(*it);
+        //        }
+        submesh->InitializeBlock();
+        itsub++;
+    }
+    fCMesh->CleanUpUnconnectedNodes();
+    itsub = submeshes.begin();
+    while (itsub != submeshes.end()) {
+        TPZSubCompMesh *submesh = itsub->second;
+        int numthreads = 0;
+        int preconditioned = 0;
+#ifdef LOG4CXX
+        if (logger->isDebugEnabled()) {
+            std::stringstream sout;
+            sout << "Newly created submesh for element " << *it << "\n";
+            submesh->Print(sout);
+            LOGPZ_DEBUG(logger, sout.str())
+        }
+#endif
+        TPZAutoPointer<TPZGuiInterface> guiInterface;
+        submesh->SetAnalysisSkyline(numthreads, preconditioned, guiInterface);
+        itsub++;
+    }
+    
+    fCMesh->SaddlePermute();
+}

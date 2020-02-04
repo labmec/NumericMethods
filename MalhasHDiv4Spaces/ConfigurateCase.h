@@ -74,8 +74,9 @@
 
 class ConfigurateCase {
     TPZGeoMesh *m_gmesh;
+    TPZMultiphysicsCompMesh *m_cmesh;
     SimulationCase fsim_case;
-    int m_fineorder = 2;
+    int m_fineorder = 1;
     int m_coarseorder = 1;
     public:
     
@@ -128,6 +129,9 @@ class ConfigurateCase {
     TPZGeoMesh *CreateMHMGeoMesh(int ncoarse_elx, int ncooars_eley, int nfine_elx, int nfine_ely);
     void CreateRefPattern();
     TPZGeoMesh *CreateGeowithRefPattern();
+    void GroupAndCondense(TPZMultiphysicsCompMesh *cmesh);
+    void HideTheElements(TPZMultiphysicsCompMesh *cmesh);
+    TPZCompMesh CreateSubStructure();
     
 };
 

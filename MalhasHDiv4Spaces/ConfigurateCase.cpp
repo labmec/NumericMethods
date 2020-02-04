@@ -10,6 +10,7 @@
 #include "pzrefquad.h"
 #include "TPZVTKGeoMesh.h"
 #include "TPZMHMixedMesh4SpacesControl.h"
+#include "TPZMHMeshControl.h"
 
 void ComputeCoarseIndices(TPZGeoMesh *gmesh, TPZVec<int64_t> &coarseindices);
 void DivideMesh(TPZGeoMesh * gmesh);
@@ -38,7 +39,7 @@ TPZCompMesh *ConfigurateCase::HDivMesh(TPZGeoMesh * gmesh, int orderfine, int or
     
     TPZCompMesh *cmesh = new TPZCompMesh(gmesh); //Creates a computational mesh
     
-    cmesh->SetDefaultOrder(ordercoarse);        //Sets a default order
+    cmesh->SetDefaultOrder(orderfine);        //Sets a default order
     TPZFMatrix<STATE> val1(dimension,dimension,0.0),val2(dimension,1,0.0);
     
     for (int ivol=0; ivol<nvols; ivol++) {
@@ -57,9 +58,15 @@ TPZCompMesh *ConfigurateCase::HDivMesh(TPZGeoMesh * gmesh, int orderfine, int or
             }
         }
     }
+
     
     cmesh->SetAllCreateFunctionsHDiv();
+
     cmesh->AutoBuild();
+    std::stringstream file_name;
+    file_name << "q_cmesh_DELETE" << ".txt";
+    std::ofstream sout(file_name.str().c_str());
+    cmesh->Print(sout);
     
         int64_t nel = cmesh->NElements();
         for (int el=0; el<nel; el++) {
@@ -78,10 +85,10 @@ TPZCompMesh *ConfigurateCase::HDivMesh(TPZGeoMesh * gmesh, int orderfine, int or
     cmesh->InitializeBlock();
     
 #ifdef PZDEBUG
-    std::stringstream file_name;
-    file_name << "q_cmesh_raw" << ".txt";
-    std::ofstream sout(file_name.str().c_str());
-    cmesh->Print(sout);
+//    std::stringstream file_name;
+//    file_name << "q_cmesh_raw" << ".txt";
+//    std::ofstream sout(file_name.str().c_str());
+//    cmesh->Print(sout);
 #endif
     
     return cmesh;
@@ -172,6 +179,7 @@ TPZMultiphysicsCompMesh *ConfigurateCase::CreateMultCompMesh(){
     int dimension = m_gmesh->Dimension();
     int nvols = fsim_case.omega_ids.size();     //Materials
     int nbound= fsim_case.gamma_ids.size();     //BC
+    bool useSubstructure_Q = true;
     
     if (nvols<1) {
         std::cout<<"Error: Omega is not defined."<<std::endl;
@@ -212,6 +220,13 @@ TPZMultiphysicsCompMesh *ConfigurateCase::CreateMultCompMesh(){
     TPZManVector<int,5> active_approx_spaces(4,1); 
    
     cmesh->BuildMultiphysicsSpace(active_approx_spaces,meshvec);
+
+    TPZMHMixedMesh4SpacesControl control;
+    control.SubStructure();
+    if (useSubstructure_Q) {
+        HideTheElements(cmesh);
+    }
+    
     if (fsim_case.IsCondensedQ){      //Asks if you want to condesate the problem
         cmesh->ComputeNodElCon();
         int dim = cmesh->Dimension();
@@ -227,12 +242,14 @@ TPZMultiphysicsCompMesh *ConfigurateCase::CreateMultCompMesh(){
         }
         
 TPZCompMeshTools::CreatedCondensedElements(cmesh, fsim_case.KeepOneLagrangianQ, fsim_case.KeepMatrixQ);
+       
         
-        if (0) {
+        if (1) {
             std::ofstream filePrint("MixedHdiv.txt");
             cmesh->Print(filePrint);
         }
     }
+     GroupAndCondense(cmesh);
     cmesh->InitializeBlock();
     return cmesh;
     
@@ -641,7 +658,7 @@ TPZGeoMesh* ConfigurateCase::CreateGeowithRefPattern(){
     gmesh2->Element(1)->Divide(sons);
     gmesh2->BuildConnectivity();
 
-    if (0) {
+    if (1) {
         std::ofstream file2("REFPatternBeforeBC.vtk");
         TPZVTKGeoMesh::PrintGMeshVTK(gmesh2, file2); //Prints a VTK before adding the BC elements
     }
@@ -662,7 +679,7 @@ TPZGeoMesh* ConfigurateCase::CreateGeowithRefPattern(){
     std::set<int> matids;
     matids.insert(-1);
     
-    if (0) {
+    if (1) {
         std::ofstream fileafter("REFPatternAfterBC.vtk");
         TPZVTKGeoMesh::PrintGMeshVTK(gmesh2, fileafter);  //Prints a VTK after adding the BC elements
     }
@@ -735,4 +752,243 @@ void ConfigurateCase::InsertMaterialObjects(TPZMHMeshControl &control)
         }
         iter++;
     }
+}
+
+/**
+ * @brief Inserts the materials objects to the MHM mesh
+ * @param control: Pointer to the mesh
+ */
+void ConfigurateCase::GroupAndCondense(TPZMultiphysicsCompMesh *cmesh)
+{
+
+    std::ofstream out("Malha_noMHM_cmeshBC.txt");
+    cmesh->Print(out);
+    int nels = cmesh->NElements();
+//for (std::map<int64_t,int64_t>::iterator it=fMHMtoSubCMesh.begin(); it != fMHMtoSubCMesh.end(); it++) {
+    for (int el=0; el<nels; el++) {
+    TPZCompEl *cel = cmesh->Element(el);
+    TPZSubCompMesh *subcmesh = dynamic_cast<TPZSubCompMesh *>(cel);
+    if (!subcmesh) {
+        //            DebugStop();
+        continue;
+    }
+
+    TPZCompMeshTools::GroupElements(subcmesh);
+    subcmesh->ComputeNodElCon();
+
+    //Prints the submeshes (txt, vtk)
+    if (0) {
+        std::stringstream sout;
+        std::stringstream sout2;
+        sout << "submesh_" << el << ".txt";
+        std::ofstream filehide(sout.str());
+        sout2 << "submesh_" << el << ".vtk";
+        std::ofstream file(sout2.str());
+        TPZVTKGeoMesh::PrintCMeshVTK(subcmesh, file,true);
+        subcmesh->Print(filehide);
+        el++;
+        }
+        //End
+        
+        //        TPZAutoPointer<TPZGuiInterface> guiInter = new TPZGuiInterface;
+        //        bool shouldrenumber = true;
+        //        subcmesh->SetAnalysisSkyline(0,1, guiInter);
+        //        subcmesh->MakeAllInternal();
+        //        subcmesh->Assemble();
+        //        TPZCompMesh *csubmesh = dynamic_cast<TPZCompMesh *>(subcmesh);
+        //        TPZAnalysis an_sub(subcmesh,shouldrenumber);
+        //        TPZSymetricSpStructMatrix strmat(subcmesh);
+        //        strmat.SetNumThreads(0);
+        //
+        //        an_sub.SetStructuralMatrix(strmat);
+        //        TPZStepSolver<STATE> step;
+        //        step.SetDirect(ELDLt);
+        //        an_sub.SetSolver(step);
+        //        an_sub.Assemble();
+        //        std::ofstream file_sub("MatrixSubmesh.txt");
+        //        an_sub.Solver().Matrix()->Print("EkSm",file_sub,EMathematicaInput);
+        
+        //        subcmesh->Analysis();
+        //        subcmesh->CalcStiff(ek, ef);
+        
+        //        // AQUI NACE EL PROBLEMA
+        //        bool shouldrenumber = false;
+        //        TPZAnalysis an_sub(subcmesh,shouldrenumber);
+        //        TPZSymetricSpStructMatrix strmat(subcmesh);
+        //        strmat.SetNumThreads(0);
+        //        an_sub.SetStructuralMatrix(strmat);
+        //        TPZStepSolver<STATE> step;
+        //        step.SetDirect(ELDLt);
+        //        an_sub.SetSolver(step);
+        //        std::cout << "Assembling submesh\n";
+        //        an_sub.Assemble();
+        //        std::ofstream filemate("MatrixSubmesh.txt");
+        //        an_sub.Solver().Matrix()->Print("EkSb",filemate,EMathematicaInput);
+        //        TPZElementMatrix ek;
+        //        TPZElementMatrix ef;
+        //        cel->CalcStiff(ek, ef);
+        //        // AQUI MUERE EL PROBLEMA
+        
+#ifdef LOG4CXX2
+        if(logger->isDebugEnabled())
+        {
+            std::stringstream sout;
+            subcmesh->Print(sout);
+            LOGPZ_DEBUG(logger, sout.str())
+        }
+#endif
+        // Increment nelconnected of exterior connects
+        
+        int nel = subcmesh->NElements();
+        for (int64_t el=0; el<nel; el++) {
+            TPZCompEl *cel = subcmesh->Element(el);
+            if (!cel) {
+                continue;
+            }
+            int nconnects = cel->NConnects();
+            for (int icon=0; icon<nconnects; icon++) {
+                TPZConnect &connect = cel->Connect(icon);
+                
+                int lagrangemult = connect.LagrangeMultiplier();
+                //Increment the number of connected elements for the avg pressure in order to not condense them
+                if (lagrangemult==3) {
+                    connect.IncrementElConnected();
+                }
+            }
+        }
+        
+        TPZCompMeshTools::CreatedCondensedElements(subcmesh, false);
+        subcmesh->CleanUpUnconnectedNodes();
+        
+        int numthreads = 0;
+        int preconditioned = 0;
+#ifdef LOG4CXX2
+        if(logger->isDebugEnabled())
+        {
+            std::stringstream sout;
+            subcmesh->Print(sout);
+            LOGPZ_DEBUG(logger, sout.str())
+        }
+#endif
+        TPZAutoPointer<TPZGuiInterface> guiInterface;
+        subcmesh->SetAnalysisSkyline(numthreads, preconditioned, guiInterface);
+        std::ofstream filehide2("subcmeshAfter.txt");
+        subcmesh->Print(filehide2);
+        }
+    }
+void ConfigurateCase::HideTheElements(TPZMultiphysicsCompMesh *cmesh)
+{
+    
+    bool KeepOneLagrangian = true;
+    TPZMHMixedMesh4SpacesControl control;
+
+    
+    typedef std::set<int64_t> TCompIndexes;
+    std::map<int64_t, TCompIndexes> ElementGroups;
+    TPZGeoMesh *gmesh = cmesh->Reference();
+    gmesh->ResetReference();
+    cmesh->LoadReferences();
+    int64_t nel = cmesh->NElements();
+
+    for (int64_t el=0; el<nel; el++) {
+        TPZCompEl *cel = cmesh->Element(el);
+        int64_t domain = control.WhichSubdomain(cel);
+        if (domain == -1) {
+            continue;
+        }
+        ElementGroups[domain].insert(el);
+    }
+    if (ElementGroups.size() <= 5)
+    {
+        std::cout << "Number of element groups " << ElementGroups.size() << std::endl;
+        std::map<int64_t,TCompIndexes>::iterator it;
+        for (it=ElementGroups.begin(); it != ElementGroups.end(); it++) {
+            std::cout << "Group " << it->first << " group size " << it->second.size() << std::endl;
+            std::cout << " elements ";
+            std::set<int64_t>::iterator its;
+            for (its = it->second.begin(); its != it->second.end(); its++) {
+                std::cout << *its << "|" << cmesh->Element(*its)->Reference()->Index() << " ";
+            }
+            std::cout << std::endl;
+        }
+    }
+    
+    std::map<int64_t,int64_t> submeshindices;
+    TPZCompMeshTools::PutinSubmeshes(cmesh, ElementGroups, submeshindices, KeepOneLagrangian);
+    std::cout << "After putting in substructures\n";
+    cmesh->ComputeNodElCon();
+    cmesh->CleanUpUnconnectedNodes();
+    
+    GroupAndCondense(cmesh);
+    
+    std::cout << "Finished substructuring\n";
+}
+
+TPZCompMesh ConfigurateCase::CreateSubStructure(){
+    
+    m_gmesh = CreateGeowithRefPattern();
+    std::ofstream outdelete("Gmesh_test_1.txt");
+    m_gmesh->Print(outdelete);
+    TPZCompMesh *cmesh = HDivMesh(m_gmesh, 2, 2);
+    std::ofstream out("Hdiv_test_1.txt");
+    cmesh->Print(out);
+    int64_t nels = cmesh->NElements();
+    TPZVec<int64_t> submeshes_index(nels,-1);
+    int64_t index;
+    int dimen;
+    int index_BC;
+    int index_BC2;
+    
+    for (int64_t el=0; el<nels; el++) {
+        TPZCompEl *element = cmesh->Element(el);
+        TPZGeoMesh *gmsh = cmesh->Reference();
+        TPZGeoEl *geoel = element->Reference();
+        dimen = element->Dimension();
+        if (!element) {
+            DebugStop();}
+        index = geoel->FatherIndex();
+
+        if (dimen == 2) {
+            submeshes_index[el] = index;
+            std::cout<<index<<endl;
+        }
+        if (dimen == 1) {
+            index_BC = geoel->NeighbourIndex(2);
+            index_BC2 = gmsh->Element(index_BC)->FatherIndex();
+            std::cout<<index_BC2<<endl;
+        }
+    }
+
+    TPZSubCompMesh *subcmesh0 = new TPZSubCompMesh(*cmesh,index);
+    TPZSubCompMesh *subcmesh1 = new TPZSubCompMesh(*cmesh,index);
+    int nd;
+    
+    for (int ind=0; ind<nels; ind++) {
+        nd =submeshes_index[ind];
+        if (nd==0) {
+            subcmesh0->TransferElement(cmesh, ind);
+        }
+        if (nd==1) {
+            subcmesh1->TransferElement(cmesh, ind);
+        }
+    }
+//    subcmesh0->CleanUpUnconnectedNodes();
+//    subcmesh1->CleanUpUnconnectedNodes();
+    subcmesh0->ComputeNodElCon();
+    subcmesh1->ComputeNodElCon();
+    subcmesh0->MakeAllInternal();
+    subcmesh1->MakeAllInternal();
+    
+    
+    
+    std::ofstream outdel0("submesh_0.txt");
+    subcmesh0->Print(outdel0);
+    std::ofstream outdel1("submesh_1.txt");
+    subcmesh1->Print(outdel1);
+    
+    
+    std::ofstream outdel_fat("Father_mesh_0.txt");
+    subcmesh0->FatherMesh()->Print(outdel_fat);
+    
+    return 0;
 }
