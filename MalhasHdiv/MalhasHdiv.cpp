@@ -76,6 +76,7 @@
 #include "pzseqsolver.h"
 #include "pzmgsolver.h"
 #include "TPZTimer.h"
+#include "TPZPrintUtils.cpp"
 
 #ifdef _AUTODIFF
 #include "tfad.h"
@@ -179,13 +180,13 @@ using namespace std;
 
 int main(){
     
-#ifdef LOG4CXX
-    InitializePZLOG();
+#ifdef PZ_LOG
+    TPZLogger::InitializePZLOG();
 #endif
     
     TPZTimer clock;
     clock.start();
-    HDiv(15, 1, 2, true, true);
+    HDiv(2, 1, 2, true, true);
     //    HdiVSimple(30, 2, true, true);
     clock.stop();
     std::ofstream Out("TotalTime.txt");
@@ -215,7 +216,7 @@ void HDiv(int nx, int order_small, int order_high, bool condense_equations_Q, bo
     
     bool KeepOneLagrangian = false;
     bool KeepMatrix = false;
-    bool render_shapes_Q = false;               //Prints a .VTK showing the render shapes
+    bool render_shapes_Q = true;               //Prints a .VTK showing the render shapes
     bool must_opt_band_width_Q = true;
     int number_threads = 0;
     
@@ -279,6 +280,13 @@ void HDiv(int nx, int order_small, int order_high, bool condense_equations_Q, bo
         vecmesh_f[3] = pavg_cmesh;           //Average pressure
         
         MixedMesh_f = GenerateMixedCmesh(vecmesh_f, 2, two_d_Q); //2 Stands for the corse mesh order
+
+        TPZPrintUtils util;
+        util.PrintCompMesh(vecmesh_f[0],"q_cmesh");
+        util.PrintCompMesh(vecmesh_f[1],"p_cmesh");
+        util.PrintCompMesh(vecmesh_f[2],"gavg_cmesh");
+        util.PrintCompMesh(vecmesh_f[3],"pavg_cmesh");
+        util.PrintCompMesh(MixedMesh_f,"MixedMesh_f");
     }
     
     

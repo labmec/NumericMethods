@@ -5,7 +5,7 @@ file(GLOB HEADERS *.h)
 file(GLOB SOURCE *.cpp)
 
 
-SET(Commonfiles_SRC "TPZCondensedMeshAlgebra.cpp" "TPZDistributedMeshAlgebra.cpp" "TPZHdivTransfer.cpp" "TPZMixedDarcyWithFourSpaces.cpp" "ConfigurateCase.cpp" "TPZMHMixedMesh4SpacesControl.cpp" "TPZPrintUtils.cpp")
+SET(Commonfiles_SRC "TPZCondensedMeshAlgebra.cpp" "TPZDistributedMeshAlgebra.cpp" "TPZHdivTransfer.cpp" "TPZMixedDarcyWithFourSpaces.cpp" "ConfigurateCase.cpp" "TPZMHMixedMesh4SpacesControl.cpp")
 
 #add_executable(MalhasHdiv MalhasHdiv.cpp ${Commonfiles_SRC} ${HEADERS})
 #add_executable(MalhasHdivRefactor MalhasHdivRefactor.cpp ${TPZCondensedMeshAlgebra.cpp TPZDistributedMeshAlgebra.cpp  TPZHdivTransfer.cpp TPZMixedDarcyWithFourSpaces.cpp }  ${HEADERS})
