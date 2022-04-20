@@ -2,7 +2,7 @@
 #include "TPZMHMixedMesh4SpacesControl.h"
 #include "pzelementgroup.h"
 #include "pzelmat.h"
-#include "pzstrmatrix.h"
+#include "pzstrmatrixor.h"
 #include "ConfigurateCase.h"
 
 /**
@@ -211,9 +211,9 @@ void TPZMHMixedMesh4SpacesControl::CreateAverageFlux()
 //    generate elements for all material ids of mesh dim
     std::set<int> matids;
 
-    TPZNullMaterial * volume = new TPZNullMaterial(1);
+    TPZNullMaterial<> * volume = new TPZNullMaterial<>(1);
     cmeshfluxavg->InsertMaterialObject(volume);
-    TPZNullMaterial * volume2 = new TPZNullMaterial(2);
+    TPZNullMaterial<> * volume2 = new TPZNullMaterial<>(2);
     cmeshfluxavg->InsertMaterialObject(volume2);
     matids.insert(1);
     matids.insert(2);
@@ -313,9 +313,9 @@ void TPZMHMixedMesh4SpacesControl::CreateAveragePressure()
     //            cmeshfluxavg->InsertMaterialObject(mat);
     //        }
     //    }
-    TPZNullMaterial * volume = new TPZNullMaterial(1);
+    TPZNullMaterial<> * volume = new TPZNullMaterial<>(1);
     cmeshpressureavr->InsertMaterialObject(volume);
-    TPZNullMaterial * volume2 = new TPZNullMaterial(2);
+    TPZNullMaterial<> * volume2 = new TPZNullMaterial<>(2);
     cmeshpressureavr->InsertMaterialObject(volume2);
     matids.insert(1);
     matids.insert(2);
@@ -535,8 +535,8 @@ void TPZMHMixedMesh4SpacesControl::GroupandCondenseElements()
 //            DebugStop();
             continue;
         }
-        TPZElementMatrix ek;
-        TPZElementMatrix ef;
+        // TPZElementMatrix ek;
+        // TPZElementMatrix ef;//JEFERSON
         TPZCompMeshTools::GroupElements(subcmesh);
         subcmesh->ComputeNodElCon();
 //        std::ofstream filehide("subcmesh1.txt");
@@ -658,7 +658,7 @@ void TPZMHMixedMesh4SpacesControl::PutinSubmeshes(TPZCompMesh *cmesh, std::map<i
 {
     for (std::map<int64_t,std::set<int64_t> >::iterator it = elindices.begin(); it != elindices.end(); it++) {
         int64_t index;
-        TPZSubCompMesh *subcmesh = new TPZSubCompMesh(*cmesh,index);
+        TPZSubCompMesh *subcmesh = new TPZSubCompMesh(*cmesh); //Anteriormente possuia um indice, cmesh, index JEFERSON
         indices[it->first] = index;
         for (std::set<int64_t>::iterator itloc = it->second.begin(); itloc != it->second.end(); itloc++) {
             subcmesh->TransferElement(cmesh, *itloc);
@@ -702,7 +702,7 @@ int64_t TPZMHMixedMesh4SpacesControl::WhichSubdomain(TPZCompEl *cel)
     int ncon = cel->NConnects();
     std::set<int64_t> domains;
     TPZCompMesh *cmesh = cel->Mesh();
-    TPZManVector<int64_t> &cvec = fConnectToSubDomainIdentifier[cmesh];
+    TPZManVector<int64_t> &cvec = this->fConnectToSubDomainIdentifier[cmesh];
     for (int ic=0; ic<ncon; ic++)
     {
         int64_t cindex = cel->ConnectIndex(ic);
@@ -737,7 +737,7 @@ void TPZMHMixedMesh4SpacesControl::SubStructure()
     // create the submeshes
     while (it != fMHMtoSubCMesh.end()) {
         int64_t index;
-        TPZSubCompMesh *submesh = new TPZSubCompMesh(fCMesh,index);
+        TPZSubCompMesh *submesh = new TPZSubCompMesh(fCMesh);
         submeshes[it->first] = submesh;
         it++;
     }

@@ -24,7 +24,24 @@ public:
     /** @brief Copy constructor */
     TPZHdivTransfer(const TPZHdivTransfer<TVar> &cp);
     
-    CLONEDEF(TPZHdivTransfer<TVar>)
+    CLONEDEF(TPZHdivTransfer)
+    TPZHdivTransfer* NewMatrix() const override{ return new TPZHdivTransfer{};}
+
+    /** @brief Creates a copy from another TPZBlockDiagonal*/
+    void CopyFrom(const TPZMatrix<TVar> *  mat) override
+    {                                                           
+        auto *from = dynamic_cast<const TPZHdivTransfer<TVar> *>(mat);                
+        if (from) {                                               
+        *this = *from;                                          
+        }                                                         
+        else                                                      
+        {                                                       
+            PZError<<__PRETTY_FUNCTION__;                         
+            PZError<<"\nERROR: Called with incompatible type\n."; 
+            PZError<<"Aborting...\n";                             
+            DebugStop();                                          
+        }                                                       
+    }
     
     /** @brief Constructor based on indexes */
     TPZHdivTransfer(int64_t rows, int64_t cols, TPZVec<int64_t> &Indexes);
@@ -61,6 +78,22 @@ public:
     /** @brief Get indexes */
     TPZVec<int64_t> & GetIndexes();
     
+protected:
+	inline TVar *&Elem() override
+    {
+        DebugStop();//Put the values of TPZMatrix or call the TPZMatrix function
+        // return fIndexes.begin();
+    }
+    inline const TVar *Elem() const override
+    {
+        DebugStop();
+        // return fIndexes.begin();
+    }
+    inline int64_t Size() const override
+    {
+        DebugStop();
+        return fIndexes.size();
+    }
 };
 
 #endif /* TPZHdivTransfer_h */

@@ -6,11 +6,21 @@
 #include "ConfigurateCase.h"
 #include "pzcondensedcompel.h"
 #include "pzelementgroup.h"
+#include "TPZLinearAnalysis.h"
+#include "pzlog.h"
+#include "TPZRefLinear.h"
+
 
 SimulationCase SimulationCase2DMHM();
 SimulationCase SimulationCase2D();
 
 int main(){
+
+#ifdef PZ_LOG
+    TPZLogger::InitializePZLOG();
+#endif
+    // gRefDBase.InitializeRefPatterns();
+    gRefDBase.InitializeUniformRefPattern(EOned);
     
     bool IsMHM_Q= false;
     bool IsNo_MHM_Q= true;
@@ -30,8 +40,8 @@ int main(){
 
         SimulationCase sim;
         
-        TPZAnalysis an_coarse(MHMIxed,shouldrenumber);
-        TPZSymetricSpStructMatrix strmat(MHMIxed);
+        TPZLinearAnalysis an_coarse(MHMIxed,shouldrenumber);
+        TPZSSpStructMatrix<STATE> strmat(MHMIxed);
         strmat.SetNumThreads(confi.GetSimulationCase().n_threads);
         an_coarse.SetStructuralMatrix(strmat);
         TPZStepSolver<STATE> step;
@@ -40,7 +50,7 @@ int main(){
         std::cout << "Assembling\n";
         an_coarse.Assemble();
         std::ofstream filemate("MatrixCoarse.txt");
-        an_coarse.Solver().Matrix()->Print("EkRs",filemate,EMathematicaInput);
+        // an_coarse.Solver().Matrix()->Print("EkRs",filemate,EMathematicaInput);
         
         std::cout << "Solving\n";
         an_coarse.Solve();
@@ -85,8 +95,8 @@ int main(){
         
         SimulationCase sim;
         
-        TPZAnalysis an_coarse(MIxed,shouldrenumber);
-        TPZSymetricSpStructMatrix strmat(MIxed);
+        TPZLinearAnalysis an_coarse(MIxed,shouldrenumber);
+        TPZSSpStructMatrix<STATE> strmat(MIxed);
         strmat.SetNumThreads(confi_nomhm.GetSimulationCase().n_threads);
         an_coarse.SetStructuralMatrix(strmat);
         TPZStepSolver<STATE> step;
@@ -95,7 +105,7 @@ int main(){
         std::cout << "Assembling\n";
         an_coarse.Assemble();
         std::ofstream filemate("MatrixCoarse_NoMHM.txt");
-        an_coarse.Solver().Matrix()->Print("EkRs",filemate,EMathematicaInput);
+        // an_coarse.Solver().Matrix()->Print("EkRs",filemate,EMathematicaInput);
         
         std::cout << "Solving\n";
         an_coarse.Solve();

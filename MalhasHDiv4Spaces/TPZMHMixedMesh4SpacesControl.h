@@ -41,8 +41,8 @@ public:
     
     TPZMHMixedMesh4SpacesControl() : TPZMHMixedMeshControl()
     {
-        fcmeshPressureAverg = new TPZCompMesh;
-        fcmeshFluxAverg = new TPZCompMesh;
+        fcmeshPressureAverg = new TPZCompMesh(fGMesh);
+        fcmeshFluxAverg = new TPZCompMesh(fGMesh);
     }
     
 //    TPZMHMixedMesh4SpacesControl(int dimension):TPZMHMixedMeshControl(dimension){

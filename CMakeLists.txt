@@ -1,8 +1,6 @@
 # @file GeomecBench/CMakeList.txt  -- First file to read for CMake
 
-cmake_minimum_required (VERSION 2.8.0)
-
-set(CMAKE_CONFIGURATION_TYPES Debug Release CACHE TYPE  INTERNAL FORCE )
+cmake_minimum_required (VERSION 3.14)
 
 project (NumericMethods)
 
@@ -14,18 +12,17 @@ ELSE (WIN32)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-narrowing")#this flag is for preventing errors when casting from double to float
 ENDIF()
 
-
+set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+# this option is useful for static analyzers
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 IF (WIN32)
-	find_package( PZ PATHS "C:/Arquivos de Programas/PZ" REQUIRED NO_DEFAULT_PATH)
+	find_package( NeoPZ PATHS "C:/Arquivos de Programas/PZ" REQUIRED NO_DEFAULT_PATH)
 ELSE()
-	find_package( PZ REQUIRED )
+	find_package( NeoPZ REQUIRED HINTS ../NeoPZ_install ../neopz_install)
 ENDIF (WIN32)
-
-
-include_directories(${PZ_INCLUDE_DIRS})
 
 # this is the top level directory of your build tree 
 MESSAGE( STATUS "CMAKE_BINARY_DIR:         " ${PZ_INCLUDE_DIRS} )
