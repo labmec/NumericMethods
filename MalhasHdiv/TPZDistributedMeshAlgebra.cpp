@@ -13,7 +13,7 @@ TPZDistributedMeshAlgebra::~TPZDistributedMeshAlgebra(){
     
 }
 
-void TPZDistributedMeshAlgebra::AssembleDiagonal(TPZBlockDiagonalStructMatrix &father_diagonal){
+void TPZDistributedMeshAlgebra::AssembleDiagonal(TPZBlockDiagonalStructMatrix<STATE> &father_diagonal){
     
     
 }

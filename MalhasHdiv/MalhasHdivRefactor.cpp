@@ -94,9 +94,9 @@ int main(){
     }
 
     bool shouldrenumber = true;
-    TPZAnalysis an_coarse(MHMIxed,shouldrenumber);
+    TPZLinearAnalysis an_coarse(MHMIxed,shouldrenumber);
     
-    TPZSymetricSpStructMatrix strmat(MHMIxed);
+    TPZSSpStructMatrix<STATE> strmat(MHMIxed);
     strmat.SetNumThreads(2);
     
     an_coarse.SetStructuralMatrix(strmat);
@@ -106,7 +106,7 @@ int main(){
     std::cout << "Assembling\n";
     an_coarse.Assemble();
     std::ofstream filemate("MatrixCoarse.txt");
-    an_coarse.Solver().Matrix()->Print("EkRs",filemate,EMathematicaInput);
+    // an_coarse.Solver()->Matrix()->Print("EkRs",filemate,EMathematicaInput);
     
     std::cout << "Solving\n";
     an_coarse.Solve();

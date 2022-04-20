@@ -26,7 +26,7 @@ protected:
     //this data structure will be computed by a structmatrix type object
     TPZMatRed<REAL, TPZFMatrix<REAL>> fStiffness;
     //block structure of the stiffness
-    TPZBlock<STATE> fBlock;
+    TPZBlock fBlock;
     //index vector of the degrees of freedom in the father mesh
     //the size of the vector determines the number of external equations
     TPZVec<int64_t> fFatherBlockIndexes;

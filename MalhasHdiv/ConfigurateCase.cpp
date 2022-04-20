@@ -32,20 +32,21 @@ TPZCompMesh *ConfigurateCase::HDivMesh(TPZGeoMesh * gmesh, int orderfine, int or
     TPZCompMesh *cmesh = new TPZCompMesh(gmesh); //Creates a computational mesh
     
     cmesh->SetDefaultOrder(ordercoarse);        //Sets a default order
-    TPZFMatrix<STATE> val1(dimension,dimension,0.0),val2(dimension,1,0.0);
+    TPZFMatrix<STATE> val1(dimension,dimension,0.0);
+    TPZManVector<STATE> val2(dimension,0.0);
     
     for (int ivol=0; ivol<nvols; ivol++) {
         //Sets data needed to materials
         TPZMixedDarcyFlow * volume = new TPZMixedDarcyFlow(fsim_case.omega_ids[ivol],fsim_case.omega_dim[ivol]);
-        volume->SetPermeability(fsim_case.permeabilities[ivol]);
+        volume->SetConstantPermeability(fsim_case.permeabilities[ivol]);
         
         cmesh->InsertMaterialObject(volume);
         if (ivol==0) {
             for (int ibound=0; ibound<nbound; ibound++) {
-                val2(0,0)=fsim_case.vals[ibound];
+                val2[0]=fsim_case.vals[ibound];
                 int condType=fsim_case.type[ibound];
                 //Creates BC conditions and insert them to the mesh
-                TPZMaterial * face = volume->CreateBC(volume,fsim_case.gamma_ids[ibound],condType,val1,val2);
+                TPZBndCondT<STATE> * face = volume->CreateBC(volume,fsim_case.gamma_ids[ibound],condType,val1,val2);
                 cmesh->InsertMaterialObject(face);
             }
         }
@@ -102,7 +103,7 @@ TPZCompMesh *ConfigurateCase::DiscontinuousMesh(TPZGeoMesh * gmesh, int order, i
     if (order == 0) {
        
         for (int ivol=0; ivol < nvols; ivol++) {
-            TPZNullMaterial * volume = new TPZNullMaterial(fsim_case.omega_ids[ivol]);
+            TPZNullMaterial<> * volume = new TPZNullMaterial<>(fsim_case.omega_ids[ivol]);
             cmesh->InsertMaterialObject(volume);
             if (fsim_case.omega_dim[ivol] == dimension) {
                 matids.insert(fsim_case.omega_ids[ivol]);
@@ -116,7 +117,7 @@ TPZCompMesh *ConfigurateCase::DiscontinuousMesh(TPZGeoMesh * gmesh, int order, i
         
         for (int ivol=0; ivol < nvols; ivol++) {
             TPZMixedDarcyFlow * volume = new TPZMixedDarcyFlow(fsim_case.omega_ids[ivol],dimension);
-            volume->SetPermeability(fsim_case.permeabilities[ivol]);
+            volume->SetConstantPermeability(fsim_case.permeabilities[ivol]);
             cmesh->InsertMaterialObject(volume);
             if (fsim_case.omega_dim[ivol] == dimension) {
                 matids.insert(fsim_case.omega_ids[ivol]);
@@ -164,20 +165,21 @@ TPZMultiphysicsCompMesh *ConfigurateCase::CreateMultCompMesh(){
     }
     
     TPZMultiphysicsCompMesh *cmesh = new TPZMultiphysicsCompMesh(m_gmesh);
-    TPZFNMatrix<9,STATE> val1(dimension,dimension,0.0),val2(dimension,1,0.0);
+    TPZFNMatrix<9,STATE> val1(dimension,dimension,0.0);
+    TPZManVector<STATE> val2(dimension,0.0);
     
     for (int ivol=0; ivol<nvols; ivol++) {
         
         TPZMixedDarcyWithFourSpaces * volume = new TPZMixedDarcyWithFourSpaces(fsim_case.omega_ids[ivol],dimension);
-        volume->SetPermeability(fsim_case.permeabilities[ivol]);
+        volume->SetConstantPermeability(fsim_case.permeabilities[ivol]);
         cmesh->InsertMaterialObject(volume);
 
         
         if (ivol==0) {
             for (int ibound=0; ibound<nbound; ibound++) {
-                val2(0,0)=fsim_case.vals[ibound];
+                val2[0]=fsim_case.vals[ibound];
                 int condType=fsim_case.type[ibound];
-                TPZMaterial * face = volume->CreateBC(volume,fsim_case.gamma_ids[ibound],condType,val1,val2);
+                TPZBndCondT<STATE> * face = volume->CreateBC(volume,fsim_case.gamma_ids[ibound],condType,val1,val2);
                 cmesh->InsertMaterialObject(face);
             }
         }
@@ -220,18 +222,18 @@ TPZMultiphysicsCompMesh *ConfigurateCase::CreateMultCompMesh(){
 
 TPZAnalysis *ConfigurateCase::CreateAnalysis(TPZMultiphysicsCompMesh *mcmesh){
     
-    TPZAnalysis *an = new TPZAnalysis(mcmesh);
+    TPZLinearAnalysis *an = new TPZLinearAnalysis(mcmesh);
     
     TPZStepSolver<STATE> step;
     if (fsim_case.UsePardisoQ) {
         
-        TPZSymetricSpStructMatrix sparse_matrix(mcmesh);
+        TPZSSpStructMatrix<STATE> sparse_matrix(mcmesh);
         sparse_matrix.SetNumThreads(fsim_case.n_threads);
         an->SetStructuralMatrix(sparse_matrix);
         
     }else{
         
-        TPZSkylineStructMatrix sparse_matrix(mcmesh);
+        TPZSkylineStructMatrix<STATE> sparse_matrix(mcmesh);
         sparse_matrix.SetNumThreads(fsim_case.n_threads);
         an->SetStructuralMatrix(sparse_matrix);
         
@@ -257,7 +259,7 @@ TPZGeoMesh * ConfigurateCase::CreateUniformMesh(int nx, REAL L, int ny, REAL h, 
         x1[1]=h;
     }
     TPZGeoMesh *gmesh = new TPZGeoMesh;         //Creates the geometric mesh
-    TPZGenGrid gen(nels,x0,x1);             
+    TPZGenGrid2D gen(nels,x0,x1);             
     gen.SetRefpatternElements(true);
     gen.Read(gmesh);                            //Add elements and nodes, created with defaut matid=1
     
@@ -601,8 +603,11 @@ void ConfigurateCase::InsertMaterialObjects(TPZMHMeshControl &control)
     TPZGeoMesh &gmesh = control.GMesh();
     
     const int typeFlux = 1, typePressure = 0;
-    TPZFMatrix<STATE> val1(1,1,0.), val2Flux(1,1,0.), val2Pressure(1,1,10.),val1Pressure(1,1,10.);
-    val2Pressure(0,0) = 1000.;
+    TPZFMatrix<STATE> val1(1,1,0.);
+    TPZManVector<STATE> val2Flux(1,0.0);
+    TPZManVector<STATE> val1Pressure(1,10.0);
+    TPZManVector<STATE> val2Pressure(1,10.0);
+    val2Pressure[0] = 1000.;
     
     int dim = gmesh.Dimension();
     cmesh.SetDimModel(dim);
@@ -611,17 +616,17 @@ void ConfigurateCase::InsertMaterialObjects(TPZMHMeshControl &control)
 
     //Setting four spaces material
     TPZMixedDarcyWithFourSpaces * mat = new TPZMixedDarcyWithFourSpaces(1,dim);
-    mat->SetPermeability(1.);
+    mat->SetConstantPermeability(1.);
     //    mat->SetForcingFunction(One);
     MixedFluxPressureCmesh->InsertMaterialObject(mat);
     
     TPZMixedDarcyWithFourSpaces * mat_2 = new TPZMixedDarcyWithFourSpaces(2,dim);
-    mat_2->SetPermeability(10000.); //cambiar para tener contraste de perm
+    mat_2->SetConstantPermeability(10000.); //cambiar para tener contraste de perm
     //    mat->SetForcingFunction(One);
     MixedFluxPressureCmesh->InsertMaterialObject(mat_2);
     
     // Bc N
-    TPZBndCond * bcN = mat->CreateBC(mat, -1, typeFlux, val1, val2Flux);
+    TPZBndCondT<STATE> * bcN = mat->CreateBC(mat, -1, typeFlux, val1, val2Flux);
     //    bcN->SetForcingFunction(0, force);
     
     MixedFluxPressureCmesh->InsertMaterialObject(bcN);
@@ -631,17 +636,17 @@ void ConfigurateCase::InsertMaterialObjects(TPZMHMeshControl &control)
     MixedFluxPressureCmesh->InsertMaterialObject(bcN);
     
     // Bc S
-    TPZBndCond * bcS = mat->CreateBC(mat, -2, typeFlux, val1, val2Flux);
+    TPZBndCondT<STATE> * bcS = mat->CreateBC(mat, -2, typeFlux, val1, val2Flux);
     
     MixedFluxPressureCmesh->InsertMaterialObject(bcS);
     bcS = mat->CreateBC(mat, -4, typeFlux, val1, val2Flux);
     MixedFluxPressureCmesh->InsertMaterialObject(bcS);
     
-    TPZBndCond * bcIn = mat->CreateBC(mat, -5, typePressure, val1, val2Pressure);
+    TPZBndCondT<STATE> * bcIn = mat->CreateBC(mat, -5, typePressure, val1, val2Pressure);
     
     MixedFluxPressureCmesh->InsertMaterialObject(bcIn);
     
-    TPZBndCond * bcOut = mat->CreateBC(mat, -6, typePressure, val1, val1Pressure);
+    TPZBndCondT<STATE> * bcOut = mat->CreateBC(mat, -6, typePressure, val1, val1Pressure);
     
     MixedFluxPressureCmesh->InsertMaterialObject(bcOut);
     

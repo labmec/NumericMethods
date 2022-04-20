@@ -217,15 +217,12 @@ TPZMultiphysicsCompMesh *ConfigurateCase::CreateMultCompMesh(){
     
     cmesh->SetDimModel(dimension);
     
-
     meshvec[0] = HDivMesh(m_gmesh, orderfine, ordercoarse);     //Flux
     meshvec[1] = DiscontinuousMesh(m_gmesh, ordercoarse, 1);    //Pressure
     meshvec[2] = DiscontinuousMesh(m_gmesh, 0, 2);              //Avg Pressure
     meshvec[3] = DiscontinuousMesh(m_gmesh, 0, 3);              //Distributed flux
     TPZManVector<int,5> active_approx_spaces(4,1); 
-
   
-
     TPZPrintUtils utils;
     utils.PrintCompMesh(meshvec[0],"mesh0");
     utils.PrintCompMesh(meshvec[1],"mesh1");
@@ -255,16 +252,17 @@ TPZMultiphysicsCompMesh *ConfigurateCase::CreateMultCompMesh(){
             cel->Connect(nc-1).IncrementElConnected();  //Increment avg pressure connect in order to not condense
         }
         
-TPZCompMeshTools::CreatedCondensedElements(cmesh, fsim_case.KeepOneLagrangianQ, fsim_case.KeepMatrixQ);
-       
+        TPZCompMeshTools::CreatedCondensedElements(cmesh, fsim_case.KeepOneLagrangianQ, fsim_case.KeepMatrixQ);
         
         if (1) {
             std::ofstream filePrint("MixedHdiv.txt");
             cmesh->Print(filePrint);
         }
     }
-     GroupAndCondense(cmesh);
+    
+    GroupAndCondense(cmesh);
     cmesh->InitializeBlock();
+    
     return cmesh;
     
 };

@@ -6,7 +6,7 @@
 #include "pzgeoel.h"
 #include "pzgnode.h"
 #include "pzgmesh.h"
-#include "pzbiharmonic.h"
+// #include "pzbiharmonic.h"
 #include "pzcmesh.h"
 #include "pzintel.h"
 #include "pzcompel.h"
@@ -16,7 +16,7 @@
 #include "pzmanvector.h"
 #include "pzstack.h"
 
-#include "pzanalysis.h"
+#include "TPZAnalysis.h"
 #include "pzfstrmatrix.h"
 #include "pzskylstrmatrix.h"
 #include "pzstepsolver.h"
@@ -26,10 +26,12 @@
 #include <TPZRefPattern.h>
 
 #include "TPZMaterial.h"
-#include "pzelasmat.h"
+#include "Elasticity/TPZElasticity2D.h"
+#include "Elasticity/TPZElasticity3D.h"
 #include "pzlog.h"
 
-#include "pzgengrid.h"
+#include "TPZGenGrid2D.h"
+#include "TPZGenGrid3D.h"
 
 #include <time.h>
 #include <stdio.h>
@@ -49,20 +51,19 @@
 #include "TPZVTKGeoMesh.h"
 #include "TPZExtendGridDimension.h"
 
-#include "TPZMatLaplacian.h"
-#include "pzpoisson3d.h"
+#include "Poisson/TPZMatPoisson.h"
 #include "TPZNullMaterial.h"
 //#include "mixedpoisson.h"
-#include "pzbndcond.h"
+#include "TPZBndCond.h"
 #include "TPZSSpStructMatrix.h"
 #include "pzskylstrmatrix.h"
 #include "TPZSkylineNSymStructMatrix.h"
 
-#include "pzanalysis.h"
+#include "TPZLinearAnalysis.h"
 #include "pzfstrmatrix.h"
 #include "pzskylstrmatrix.h"
 #include "pzstepsolver.h"
-#include "pzsolve.h"
+#include "TPZSolver.h"
 #include "TPZPersistenceManager.h"
 #include "pzbuildmultiphysicsmesh.h"
 #include "TPZMultiphysicsCompMesh.h"
@@ -83,13 +84,65 @@
 #endif
 
 
+/**
+ * @brief Generates the force function for the 1D case
+ * @param pt: Points values
+ * @param disp: Vector
+ */
+auto Ladoderecho_1D = [](const TPZVec<REAL> &pt, TPZVec<STATE> &disp){
+    
+    STATE x = pt[0];
+    double fx= 4*M_PI*M_PI*sin(2*M_PI*x);        //Force function definition
+    disp[0]=fx;
+    
+};
+
+/**
+ * @brief Generates the force function for the 2D case
+ * @param pt: Points values
+ * @param disp: Vector
+ */
+
+auto Ladoderecho_2D = [](const TPZVec<REAL> &pt, TPZVec<STATE> &disp){
+    
+    STATE x = pt[0];
+    STATE y = pt[1];
+    
+    double fx= 2*M_PI*M_PI*sin(M_PI*x)*sin(M_PI*y);        //Force function definition
+    
+    //    double fx =-4144.653167389283*pow(10,
+    //                                      -pow(-2*M_PI + 15.*x,2) - pow(-2*M_PI + 15.*y,2))*
+    //    (-2*M_PI + 15.*x) + 4771.70829943056*
+    //    pow(10,-pow(-2*M_PI + 15.*x,2) -
+    //        pow(-2*M_PI + 15.*y,2))*pow(-2*M_PI + 15.*x,3) +
+    //    4771.70829943056*pow(10,
+    //                         -pow(-2*M_PI + 15.*x,2) - pow(-2*M_PI + 15.*y,2))*
+    //    (-2*M_PI + 15.*x)*pow(-2*M_PI + 15.*y,2);
+    //
+    //    double fx = -4144.653167389282*pow(2,2 - pow(-2*M_PI + 15.*x,2) -
+    //                                       pow(-2*M_PI + 15.*y,2))*
+    //    pow(5,-pow(-2*M_PI + 15.*x,2) - pow(-2*M_PI + 15.*y,2))*
+    //    (-2*M_PI + 15.*x) + 4771.708299430558*
+    //    pow(2,2 - pow(-2*M_PI + 15.*x,2) - pow(-2*M_PI + 15.*y,2))*
+    //    pow(5,-pow(-2*M_PI + 15.*x,2) - pow(-2*M_PI + 15.*y,2))*
+    //    pow(-2*M_PI + 15.*x,3) +
+    //    4771.708299430558*pow(2,
+    //                          2 - pow(-2*M_PI + 15.*x,2) - pow(-2*M_PI + 15.*y,2))*
+    //    pow(5,-pow(-2*M_PI + 15.*x,2) - pow(-2*M_PI + 15.*y,2))*
+    //    (-2*M_PI + 15.*x)*pow(-2*M_PI + 15.*y,2);
+    
+    disp[0]=0.0;
+    
+    
+};
+
 //Creating geometric 1D and 2D mesh
 TPZGeoMesh * GenerateGmeshOne(int nx, double l);
 TPZGeoMesh * GenerateGmesh(int nx, int ny, double l, double h);
 
 //Stablish de force fuction for 1D and 2D mesh
-void Ladoderecho_1D(const TPZVec<REAL> &pt, TPZVec<STATE> &disp);
-void Ladoderecho_2D(const TPZVec<REAL> &pt, TPZVec<STATE> &disp);
+// void Ladoderecho_1D(const TPZVec<REAL> &pt, TPZVec<STATE> &disp);
+// void Ladoderecho_2D(const TPZVec<REAL> &pt, TPZVec<STATE> &disp);
 
 //Stablish an exact solution
 void SolExact(const TPZVec<REAL> &ptx, TPZVec<STATE> &sol, TPZFMatrix<STATE> &flux);
@@ -253,13 +306,13 @@ void HDiv(int nx, int order_small, int order_high, bool condense_equations_Q, bo
     //Solving the system:
     MixedMesh_c->InitializeBlock();    //Resequence the block object, remove unconnected connect objects
     MixedMesh_f->InitializeBlock();    //and reset the dimension of the solution vector
-    TPZAnalysis *an_c = new TPZAnalysis;
-    TPZAnalysis *an_f = new TPZAnalysis;
+    TPZLinearAnalysis *an_c = new TPZLinearAnalysis;
+    TPZLinearAnalysis *an_f = new TPZLinearAnalysis;
     //True to use pardiso
     ConfigurateAnalyses(MixedMesh_c, MixedMesh_f, must_opt_band_width_Q, number_threads, an_c, an_f, true);
     
     if(render_shapes_Q){
-        TPZAnalysis anloc(MixedMesh_c,false);
+        TPZLinearAnalysis anloc(MixedMesh_c,false);
         std::string filename("Shape.vtk");
         TPZVec<int64_t> indices(20);
         for(int i=0; i<20; i++) indices[i] = i;
@@ -298,7 +351,7 @@ void HDiv(int nx, int order_small, int order_high, bool condense_equations_Q, bo
         
         // Constructing block diagonal
         if(1){
-            TPZBlockDiagonalStructMatrix bdstr(MixedMesh_f);     //Give the fine
+            TPZBlockDiagonalStructMatrix<STATE> bdstr(MixedMesh_f);     //Give the fine
             
             
             TPZBlockDiagonal<STATE> * sp = new TPZBlockDiagonal<STATE>();
@@ -346,10 +399,12 @@ void HDiv(int nx, int order_small, int order_high, bool condense_equations_Q, bo
             TPZStepSolver<STATE> step;
             step.SetDirect(ELDLt);
             //            coarsesol.Print(std::cout);
-            an_c->Solver().Solve(coarsesol,coarsesol); //Force vector, solution
+            // an_c->Solver().Solve(coarsesol,coarsesol); //Force vector, solution
+            an_c->Solve(); //Force vector, solution
             //            coarsesol.Print(std::cout);
-            TPZMGSolver<STATE> mgsolve(transfer,an_c->Solver(),1);
-            mgsolve.SetMatrix(an_f->Solver().Matrix());
+            TPZMGSolver<STATE> mgsolve(transfer,an_c->MatrixSolver<STATE>(),1);
+            // mgsolve.SetMatrix(an_f->Solver()->Matrix());
+            mgsolve.SetMatrix(an_f->StructMatrix());
             //            finesol.Print(std::cout);
             mgsolve.Solve(finesol, finesol);
             //            finesol.Print(std::cout);
@@ -375,7 +430,8 @@ void HDiv(int nx, int order_small, int order_high, bool condense_equations_Q, bo
             BDSolve.SetDirect(ELU);
             TPZSequenceSolver<STATE> seqsolver;
             
-            seqsolver.SetMatrix(an_f->Solver().Matrix());
+            // seqsolver.SetMatrix(an_f->Solver()->Matrix());
+            seqsolver.SetMatrix(an_f->StructMatrix());
             seqsolver.AppendSolver(mgsolve); //Updates the values of the preconditioner based on the values of the matrix
             seqsolver.AppendSolver(BDSolve);
             seqsolver.AppendSolver(mgsolve);
@@ -386,7 +442,8 @@ void HDiv(int nx, int order_small, int order_high, bool condense_equations_Q, bo
             
             //            std::ofstream file("matblock.nb");
             //            sp->Print("k = ",file,EMathematicaInput);
-            TPZStepSolver<STATE> cg_solve(an_f->Solver().Matrix());
+            // TPZStepSolver<STATE> cg_solve(an_f->Solver()->Matrix());
+            TPZStepSolver<STATE> cg_solve(an_f->StructMatrix());
             cg_solve.SetCG(200, seqsolver, 1.e-10, 0);
             //            finesol.Print(std::cout);
             finesol.Zero();
@@ -473,8 +530,8 @@ TPZGeoMesh * GenerateGmesh(int nx, int ny, double l, double h){
     x1[2]=0;
     
     //Setting boundary conditions (negative numbers to recognize them)
-    TPZGenGrid gen(nels,x0,x1);
-    gen.SetElementType(EQuadrilateral);
+    TPZGenGrid2D gen(nels,x0,x1);
+    gen.SetElementType(MMeshType::EQuadrilateral);
     gen.Read(gmesh);
     gen.SetBC(gmesh, 4, -1);
     gen.SetBC(gmesh, 5, -2);
@@ -503,12 +560,12 @@ TPZCompMesh * GeneratePressureCmesh(TPZGeoMesh *Gmesh, int order){
     int MaterialId = 1;
     STATE Permeability=1;
     
-    TPZMatPoisson3d *mat = new TPZMatPoisson3d(MaterialId, dimen);
+    TPZNullMaterial<STATE> *mat = new TPZNullMaterial<STATE>(MaterialId, dimen);
     
     //No convection
     REAL conv=0;
     TPZVec<REAL> convdir(dimen, 0);
-    mat->SetParameters(Permeability, conv, convdir);
+    // mat->SetConstantPermeability(Permeability);
     
     //Insert material to mesh
     Cmesh->InsertMaterialObject(mat);
@@ -544,7 +601,7 @@ TPZCompMesh * GenerateConstantCmesh(TPZGeoMesh *Gmesh, bool third_LM)
     int dimen = Gmesh->Dimension();
     int MaterialId = 1;
     
-    TPZNullMaterial *mat =new TPZNullMaterial(MaterialId);
+    TPZNullMaterial<> *mat =new TPZNullMaterial<>(MaterialId);
     mat->SetDimension(dimen);
     mat->SetNStateVariables(1);
     
@@ -587,8 +644,8 @@ TPZCompMesh * GenerateFluxCmesh(TPZGeoMesh *mesh, int order_internal, int order_
     REAL conv=0;
     REAL perme=1;
     TPZVec<REAL> convdir(dimen , 0.0);
-    TPZMatPoisson3d *mat = new TPZMatPoisson3d(perm , dimen);
-    mat->SetParameters(perme, conv, convdir);
+    TPZNullMaterial<STATE> *mat = new TPZNullMaterial<STATE>(perm , dimen);
+    // mat->SetParameters(perme, conv, convdir);
     
     //Inserting volumetric materials objects
     Cmesh->InsertMaterialObject(mat);
@@ -602,23 +659,23 @@ TPZCompMesh * GenerateFluxCmesh(TPZGeoMesh *mesh, int order_internal, int order_
     int N=1;
     int BC1=-1;
     TPZFMatrix<STATE> val1(1,1,0.0);
-    TPZFMatrix<STATE> val2(1,1,0.0);
-    TPZMaterial *bc1 = mat->CreateBC(mat, BC1, N, val1, val2);
+    TPZManVector<STATE> val2(1,0.0);
+    TPZBndCondT<STATE> *bc1 = mat->CreateBC(mat, BC1, N, val1, val2);
     Cmesh->InsertMaterialObject(bc1);
     
     int BC2=-2;
-    val2(0,0)=1000;
-    TPZMaterial *bc2 = mat->CreateBC(mat, BC2, D, val1, val2);
+    val2[0]=1000;
+    TPZBndCondT<STATE> *bc2 = mat->CreateBC(mat, BC2, D, val1, val2);
     Cmesh->InsertMaterialObject(bc2);
     
     int BC3=-3;
-    val2(0,0)=0;
-    TPZMaterial *bc3 = mat->CreateBC(mat, BC3, N, val1, val2);
+    val2[0]=0;
+    TPZBndCondT<STATE> *bc3 = mat->CreateBC(mat, BC3, N, val1, val2);
     Cmesh->InsertMaterialObject(bc3);
     
     int BC4=-4;
-    val2(0,0)=100;
-    TPZMaterial *bc4 = mat->CreateBC(mat, BC4, D, val1, val2);
+    val2[0]=100;
+    TPZBndCondT<STATE> *bc4 = mat->CreateBC(mat, BC4, D, val1, val2);
     Cmesh->InsertMaterialObject(bc4);
     
     
@@ -657,14 +714,14 @@ TPZMultiphysicsCompMesh * GenerateMixedCmesh(TPZVec<TPZCompMesh *> fvecmesh, int
     
     //Inserting material
     TPZMixedDarcyWithFourSpaces * mat = new TPZMixedDarcyWithFourSpaces(matnum, dimen);
-    mat->SetPermeability(perm);
+    mat->SetConstantPermeability(perm);
     
     if (two_d_Q) {
-        TPZAutoPointer<TPZFunction<STATE> > sourceterm = new TPZDummyFunction<STATE>(Ladoderecho_2D, 10);
-        mat->SetForcingFunction(sourceterm);
+        // TPZFunction<STATE> sourceterm = new TPZDummyFunction<STATE>(Ladoderecho_2D, 10);
+        mat->SetForcingFunction(Ladoderecho_2D,3);
     } else {
-        TPZAutoPointer<TPZFunction<STATE> > sourceterm = new TPZDummyFunction<STATE>(Ladoderecho_1D, 10);
-        mat->SetForcingFunction(sourceterm);
+        // TPZFunction<STATE> sourceterm = new TPZDummyFunction<STATE>(Ladoderecho_1D, 10);
+        mat->SetForcingFunction(Ladoderecho_1D,3);
     }
     
     //Inserting volumetric materials objects
@@ -675,25 +732,25 @@ TPZMultiphysicsCompMesh * GenerateMixedCmesh(TPZVec<TPZCompMesh *> fvecmesh, int
     int N=1;
     int BC1=-1;
     TPZFMatrix<STATE> val1(1,1,0.0);
-    TPZFMatrix<STATE> val2(1,1,0.0);
+    TPZManVector<STATE> val2(1,0.0);
     
-    val2(0,0)=0.0;
-    TPZMaterial *bc1 = mat->CreateBC(mat, BC1, N, val1, val2);
+    val2[0]=0.0;
+    TPZBndCondT<STATE> *bc1 = mat->CreateBC(mat, BC1, N, val1, val2);
     MixedMesh->InsertMaterialObject(bc1);
     
     int BC2=-2;
-    val2(0,0)=1000;
-    TPZMaterial *bc2 = mat->CreateBC(mat, BC2, D, val1, val2);
+    val2[0]=1000;
+    TPZBndCondT<STATE> *bc2 = mat->CreateBC(mat, BC2, D, val1, val2);
     MixedMesh->InsertMaterialObject(bc2);
     
     int BC3=-3;
-    val2(0,0)=0;
-    TPZMaterial *bc3 = mat->CreateBC(mat, BC3, N, val1, val2);
+    val2[0]=0;
+    TPZBndCondT<STATE> *bc3 = mat->CreateBC(mat, BC3, N, val1, val2);
     MixedMesh->InsertMaterialObject(bc3);
     
     int BC4=-4;
-    val2(0,0)=100;
-    TPZMaterial *bc4 = mat->CreateBC(mat, BC4, D, val1, val2);
+    val2[0]=100;
+    TPZBndCondT<STATE> *bc4 = mat->CreateBC(mat, BC4, D, val1, val2);
     MixedMesh->InsertMaterialObject(bc4);
     
     MixedMesh->SetAllCreateFunctionsMultiphysicElem();
@@ -720,57 +777,6 @@ TPZMultiphysicsCompMesh * GenerateMixedCmesh(TPZVec<TPZCompMesh *> fvecmesh, int
     return MixedMesh;
 };
 
-/**
- * @brief Generates the force function for the 1D case
- * @param pt: Points values
- * @param disp: Vector
- */
-void Ladoderecho_1D (const TPZVec<REAL> &pt, TPZVec<STATE> &disp){
-    
-    STATE x = pt[0];
-    double fx= 4*M_PI*M_PI*sin(2*M_PI*x);        //Force function definition
-    disp[0]=fx;
-    
-}
-
-/**
- * @brief Generates the force function for the 2D case
- * @param pt: Points values
- * @param disp: Vector
- */
-
-void Ladoderecho_2D (const TPZVec<REAL> &pt, TPZVec<STATE> &disp){
-    
-    STATE x = pt[0];
-    STATE y = pt[1];
-    
-    double fx= 2*M_PI*M_PI*sin(M_PI*x)*sin(M_PI*y);        //Force function definition
-    
-    //    double fx =-4144.653167389283*pow(10,
-    //                                      -pow(-2*M_PI + 15.*x,2) - pow(-2*M_PI + 15.*y,2))*
-    //    (-2*M_PI + 15.*x) + 4771.70829943056*
-    //    pow(10,-pow(-2*M_PI + 15.*x,2) -
-    //        pow(-2*M_PI + 15.*y,2))*pow(-2*M_PI + 15.*x,3) +
-    //    4771.70829943056*pow(10,
-    //                         -pow(-2*M_PI + 15.*x,2) - pow(-2*M_PI + 15.*y,2))*
-    //    (-2*M_PI + 15.*x)*pow(-2*M_PI + 15.*y,2);
-    //
-    //    double fx = -4144.653167389282*pow(2,2 - pow(-2*M_PI + 15.*x,2) -
-    //                                       pow(-2*M_PI + 15.*y,2))*
-    //    pow(5,-pow(-2*M_PI + 15.*x,2) - pow(-2*M_PI + 15.*y,2))*
-    //    (-2*M_PI + 15.*x) + 4771.708299430558*
-    //    pow(2,2 - pow(-2*M_PI + 15.*x,2) - pow(-2*M_PI + 15.*y,2))*
-    //    pow(5,-pow(-2*M_PI + 15.*x,2) - pow(-2*M_PI + 15.*y,2))*
-    //    pow(-2*M_PI + 15.*x,3) +
-    //    4771.708299430558*pow(2,
-    //                          2 - pow(-2*M_PI + 15.*x,2) - pow(-2*M_PI + 15.*y,2))*
-    //    pow(5,-pow(-2*M_PI + 15.*x,2) - pow(-2*M_PI + 15.*y,2))*
-    //    (-2*M_PI + 15.*x)*pow(-2*M_PI + 15.*y,2);
-    
-    disp[0]=0.0;
-    
-    
-}
 
 /**
  * @brief Generates a index vector which relates coarse and fine mesh
@@ -885,8 +891,8 @@ void ConfigurateAnalyses(TPZCompMesh * cmesh_c, TPZCompMesh * cmesh_f, bool must
     TPZStepSolver<STATE> step;
     if (UsePardiso_Q) {
         
-        TPZSymetricSpStructMatrix sparse_matrix_coarse(cmesh_c);
-        TPZSymetricSpStructMatrix sparse_matrix_fine(cmesh_f);
+        TPZSSpStructMatrix<STATE> sparse_matrix_coarse(cmesh_c);
+        TPZSSpStructMatrix<STATE> sparse_matrix_fine(cmesh_f);
         sparse_matrix_coarse.SetNumThreads(number_threads);
         sparse_matrix_fine.SetNumThreads(number_threads);
         an_c->SetStructuralMatrix(sparse_matrix_coarse);
@@ -894,8 +900,8 @@ void ConfigurateAnalyses(TPZCompMesh * cmesh_c, TPZCompMesh * cmesh_f, bool must
         
     }else{
         
-        TPZSkylineStructMatrix sparse_matrix_coarse(cmesh_c);
-        TPZSkylineStructMatrix sparse_matrix_fine(cmesh_f);
+        TPZSkylineStructMatrix<STATE> sparse_matrix_coarse(cmesh_c);
+        TPZSkylineStructMatrix<STATE> sparse_matrix_fine(cmesh_f);
         sparse_matrix_coarse.SetNumThreads(number_threads);
         sparse_matrix_fine.SetNumThreads(number_threads);
         an_c->SetStructuralMatrix(sparse_matrix_coarse);
@@ -932,9 +938,9 @@ void ShowShape(TPZCompMesh * cmesh, int element, int funcion, std::string plotfi
     mat_2->Clone(matvec);
     cmesh->CleanUp();
     
-    TPZMatPoisson3d *mat = new TPZMatPoisson3d(100 , 2);
+    TPZMatPoisson<STATE> *mat = new TPZMatPoisson<STATE>(100 , 2);
     TPZMaterial *perf_mat( matvec[1]);
-    TPZMatPoisson3d *aux_mat = dynamic_cast<TPZMatPoisson3d *>(perf_mat);
+    TPZMatPoisson<STATE> *aux_mat = dynamic_cast<TPZMatPoisson<STATE> *>(perf_mat);
     
     cmesh->InsertMaterialObject(mat);
     cmesh->AutoBuild();
@@ -979,7 +985,7 @@ void ShowShape(TPZCompMesh * cmesh, int element, int funcion, std::string plotfi
                     sol(pos,0)=1.0;
                     cmesh->LoadSolution(sol);
                     
-                    TPZAnalysis *an = new TPZAnalysis(cmesh,false);
+                    TPZLinearAnalysis *an = new TPZLinearAnalysis(cmesh,false);
                     {
                         const int dim = an->Mesh()->Dimension();
                         int div = 5;
@@ -1124,7 +1130,7 @@ void HdiVSimple(int nx, int order_high, bool condense_equations_Q, bool two_d_Q)
     
     //Solving the system:
     MixedMesh_c->InitializeBlock();    //Resequence the block object, remove unconnected connect objects
-    TPZAnalysis *an_c = new TPZAnalysis;
+    TPZLinearAnalysis *an_c = new TPZLinearAnalysis;
     
     TPZTimer AssemblyFine;
     AssemblyFine.start();

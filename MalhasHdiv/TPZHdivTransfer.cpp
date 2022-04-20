@@ -5,6 +5,7 @@
 //
 
 #include "TPZHdivTransfer.h"
+#include "pzfmatrix.h"
 
 
 template<class TVar>

@@ -26,7 +26,7 @@ protected:
     //represents the right hand side
     TPZFMatrix<STATE> fRhs;
     //represents the block structure of the matrix
-    TPZBlock<STATE> fBlock;
+    TPZBlock fBlock;
     //represents the residual
     TPZFMatrix<STATE> fResidual;
     //solution vector
@@ -56,7 +56,7 @@ public:
     
     //compute the values of the blockdiagonal
     //fill in the block diagonal contribution to the father mesh
-    void AssembleDiagonal(TPZBlockDiagonalStructMatrix &father_diagonal);
+    void AssembleDiagonal(TPZBlockDiagonalStructMatrix<STATE> &father_diagonal);
     //method for computing the residual Res=F-KU
     //returns the contribution to the father residual
     void ComputeResidual(TPZFMatrix<STATE> &father_rhs);

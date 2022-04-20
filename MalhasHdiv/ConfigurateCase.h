@@ -12,7 +12,7 @@
 #include "pzmanvector.h"
 #include "pzstack.h"
 
-#include "pzanalysis.h"
+#include "TPZLinearAnalysis.h"
 #include "pzfstrmatrix.h"
 #include "pzskylstrmatrix.h"
 #include "pzstepsolver.h"
@@ -24,7 +24,8 @@
 #include "TPZMaterial.h"
 //#include "pzelasmat.h"
 //#include "pzlog.h"
-#include "pzgengrid.h"
+#include "TPZGenGrid2D.h"
+#include "TPZGenGrid3D.h"
 
 //#include <time.h>
 //#include <stdio.h>
@@ -45,17 +46,17 @@
 #include "TPZExtendGridDimension.h"
 
 //#include "TPZMatLaplacian.h"
-#include "pzpoisson3d.h"
+#include "Poisson/TPZMatPoisson.h"
 #include "TPZNullMaterial.h"
-#include "pzbndcond.h"
+#include "TPZBndCond.h"
 #include "TPZSSpStructMatrix.h"
 #include "pzskylstrmatrix.h"
 #include "TPZSkylineNSymStructMatrix.h"
 
-#include "pzanalysis.h"
+#include "TPZAnalysis.h"
 #include "pzfstrmatrix.h"
 #include "pzskylstrmatrix.h"
-#include "pzsolve.h"
+#include "TPZSolver.h"
 #include "TPZPersistenceManager.h"
 #include "pzbuildmultiphysicsmesh.h"
 #include "TPZMultiphysicsCompMesh.h"

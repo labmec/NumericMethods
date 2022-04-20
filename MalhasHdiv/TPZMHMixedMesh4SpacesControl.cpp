@@ -199,9 +199,9 @@ void TPZMHMixedMesh4SpacesControl::CreateAverageFlux()
 //    generate elements for all material ids of meshdim
     std::set<int> matids;
 
-    TPZNullMaterial * volume = new TPZNullMaterial(1);
+    TPZNullMaterial<> * volume = new TPZNullMaterial<>(1);
     cmeshfluxavg->InsertMaterialObject(volume);
-    TPZNullMaterial * volume2 = new TPZNullMaterial(2);
+    TPZNullMaterial<> * volume2 = new TPZNullMaterial<>(2);
     cmeshfluxavg->InsertMaterialObject(volume2);
     matids.insert(1);
     matids.insert(2);
@@ -296,9 +296,9 @@ void TPZMHMixedMesh4SpacesControl::CreateAveragePressure()
     //            cmeshfluxavg->InsertMaterialObject(mat);
     //        }
     //    }
-    TPZNullMaterial * volume = new TPZNullMaterial(1);
+    TPZNullMaterial<> * volume = new TPZNullMaterial<>(1);
     cmeshpressureavr->InsertMaterialObject(volume);
-    TPZNullMaterial * volume2 = new TPZNullMaterial(2);
+    TPZNullMaterial<> * volume2 = new TPZNullMaterial<>(2);
     cmeshpressureavr->InsertMaterialObject(volume2);
     matids.insert(1);
     matids.insert(2);
@@ -627,7 +627,7 @@ void TPZMHMixedMesh4SpacesControl::PutinSubmeshes(TPZCompMesh *cmesh, std::map<i
     //
     for (std::map<int64_t,std::set<int64_t> >::iterator it = elindices.begin(); it != elindices.end(); it++) {
         int64_t index;
-        TPZSubCompMesh *subcmesh = new TPZSubCompMesh(*cmesh,index);
+        TPZSubCompMesh *subcmesh = new TPZSubCompMesh(*cmesh);
         indices[it->first] = index;
         for (std::set<int64_t>::iterator itloc = it->second.begin(); itloc != it->second.end(); itloc++) {
             subcmesh->TransferElement(cmesh, *itloc);
