@@ -33,14 +33,14 @@ public:
     /** @brief Volumetric contribute without jacobian matrix */
     void Contribute(const TPZVec<TPZMaterialDataT<STATE>> &datavec,REAL weight, TPZFMatrix<STATE> &ef) override;
     
-    /** @brief Variable index based on variable naming */
-    int VariableIndex(const std::string &name) const override;
+    // /** @brief Variable index based on variable naming */
+    // int VariableIndex(const std::string &name) const override;
     
-    /** @brief size of the current variable (1 -> scalar, 3-> vector, 9 ->  Tensor ) */
-    int NSolutionVariables(int var) const override;
+    // /** @brief size of the current variable (1 -> scalar, 3-> vector, 9 ->  Tensor ) */
+    // int NSolutionVariables(int var) const override;
     
-    /** @brief Postprocess required variables multiphysics */
-    void Solution(const TPZVec<TPZMaterialDataT<STATE>> &datavec, int var, TPZVec<STATE> &Solout) override;
+    // /** @brief Postprocess required variables multiphysics */
+    // void Solution(const TPZVec<TPZMaterialDataT<STATE>> &datavec, int var, TPZVec<STATE> &Solout) override;
     
 };
 

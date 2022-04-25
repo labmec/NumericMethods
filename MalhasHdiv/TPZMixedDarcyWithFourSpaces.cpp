@@ -68,33 +68,33 @@ void TPZMixedDarcyWithFourSpaces::Contribute(const TPZVec<TPZMaterialDataT<STATE
 }
 
 
-int TPZMixedDarcyWithFourSpaces::VariableIndex(const std::string &name) const {
-    if(!strcmp("g_average",name.c_str()))        return  5;
-    if(!strcmp("u_average",name.c_str()))        return  6;
-    return TPZMixedDarcyFlow::VariableIndex(name);
-}
+// int TPZMixedDarcyWithFourSpaces::VariableIndex(const std::string &name) const {
+//     if(!strcmp("g_average",name.c_str()))        return  5;
+//     if(!strcmp("u_average",name.c_str()))        return  6;
+//     return TPZMixedDarcyFlow::VariableIndex(name);
+// }
 
-int TPZMixedDarcyWithFourSpaces::NSolutionVariables(int var) const {
-    if(var == 5) return 1;
-    if(var == 6) return 1;
-    return TPZMixedDarcyFlow::NSolutionVariables(var);
-}
+// int TPZMixedDarcyWithFourSpaces::NSolutionVariables(int var) const {
+//     if(var == 5) return 1;
+//     if(var == 6) return 1;
+//     return TPZMixedDarcyFlow::NSolutionVariables(var);
+// }
 
-void TPZMixedDarcyWithFourSpaces::Solution(const TPZVec<TPZMaterialDataT<STATE>> &datavec, int var, TPZVec<STATE> &Solout){
+// void TPZMixedDarcyWithFourSpaces::Solution(const TPZVec<TPZMaterialDataT<STATE>> &datavec, int var, TPZVec<STATE> &Solout){
 
-    int g_avgb = 2;
-    int p_avgb = 3;
+//     int g_avgb = 2;
+//     int p_avgb = 3;
     
-    if(var ==5)
-    {
-        Solout[0] = datavec[g_avgb].sol[0][0];
-        return;
-    }
-    if(var ==6)
-    {
-        Solout[0] = datavec[p_avgb].sol[0][0];
-        return;
-    }
+//     if(var ==5)
+//     {
+//         Solout[0] = datavec[g_avgb].sol[0][0];
+//         return;
+//     }
+//     if(var ==6)
+//     {
+//         Solout[0] = datavec[p_avgb].sol[0][0];
+//         return;
+//     }
     
-    TPZMixedDarcyFlow::Solution(datavec, var, Solout);
-}
+//     TPZMixedDarcyFlow::Solution(datavec, var, Solout);
+// }
