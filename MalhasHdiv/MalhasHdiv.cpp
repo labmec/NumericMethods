@@ -77,6 +77,8 @@
 #include "pzmgsolver.h"
 #include "TPZTimer.h"
 #include "TPZPrintUtils.cpp"
+#include "pzelementgroup.h"
+#include "pzcondensedcompel.h"
 
 #ifdef _AUTODIFF
 #include "tfad.h"
@@ -84,6 +86,7 @@
 #include "pzextractval.h"
 #endif
 
+std::ofstream rprint("results.txt",std::ofstream::out);
 
 /**
  * @brief Generates the force function for the 1D case
@@ -132,7 +135,7 @@ auto Ladoderecho_2D = [](const TPZVec<REAL> &pt, TPZVec<STATE> &disp){
     //    pow(5,-pow(-2*M_PI + 15.*x,2) - pow(-2*M_PI + 15.*y,2))*
     //    (-2*M_PI + 15.*x)*pow(-2*M_PI + 15.*y,2);
     
-    disp[0]=fx;
+    disp[0]=0.;//fx;
     
     
 };
@@ -144,13 +147,13 @@ auto exactSol = [](const TPZVec<REAL> &loc,
     const auto &y=loc[1];
     const auto &z=loc[2];
 
-    u[0]= std::sin(M_PI*x)*std::sin(M_PI*y) ;
-    // u[0] = x*x + y*y;    
+    u[0]= std::sin(M_PI*x)*std::sin(M_PI*y);
+    u[0] = x*x*x*y - y*y*y*x;    
 
     gradU(0,0) = -M_PI*cos(M_PI*x)*sin(M_PI*y);
     gradU(1,0) = -M_PI*cos(M_PI*y)*sin(M_PI*x);
-    // gradU(0,0) = 2.*x;
-    // gradU(1,0) = 2.*y;
+    gradU(0,0) = (3.*x*x*y - y*y*y);
+    gradU(1,0) = (x*x*x - 3.*y*y*x);
 
     //exact Divergent
     gradU(2,0) = -2*M_PI*M_PI*sin(M_PI*x)*sin(M_PI*y);
@@ -199,6 +202,9 @@ void ShowShape(TPZCompMesh * cmesh, int element, int funcion,std::string plotnam
 
 void HdiVSimple(int nx, int order_high, bool condense_equations_Q, bool two_d_Q);
 
+void AssociateElements(TPZMultiphysicsCompMesh *cmesh, TPZVec<int64_t> &elementgroup, std::set<int> &matId);
+void CondenseBCElements(TPZMultiphysicsCompMesh *cmesh, std::set<int> &matIdBC);
+
 
 using namespace std;
 
@@ -210,7 +216,21 @@ int main(){
     
     TPZTimer clock;
     clock.start();
+    HDiv(2, 1, 2, true, true);
     HDiv(5, 1, 2, true, true);
+    HDiv(10, 1, 2, true, true);
+    HDiv(15, 1, 2, true, true);
+    HDiv(25, 1, 2, true, true);
+    HDiv(30, 1, 2, true, true);
+    HDiv(35, 1, 2, true, true);
+    HDiv(40, 1, 2, true, true);
+    HDiv(45, 1, 2, true, true);
+    HDiv(50, 1, 2, true, true);
+    HDiv(60, 1, 2, true, true);
+    HDiv(70, 1, 2, true, true);
+    HDiv(80, 1, 2, true, true);
+    HDiv(90, 1, 2, true, true);
+    HDiv(100, 1, 2, true, true);
     //    HdiVSimple(30, 2, true, true);
     clock.stop();
     std::ofstream Out("TotalTime.txt");
@@ -286,9 +306,15 @@ void HDiv(int nx, int order_small, int order_high, bool condense_equations_Q, bo
         util.PrintCompMesh(MixedMesh_c,"MixedMesh_C");
     }
     
+    std::set<int> matIDBC = {-1,-2,-3,-4};
     if (condense_equations_Q) {             //Asks if you want to condesate the problem
         // Created condensed elements for the elements that have internal nodes
+        // std::cout << "CNEQUATIONS1 = " << MixedMesh_c->NEquations() << std::endl;
+        CondenseBCElements(MixedMesh_c,matIDBC);
+        // std::cout << "CNEQUATIONS2 = " << MixedMesh_c->NEquations() << std::endl;
         TPZCompMeshTools::CondenseElements(MixedMesh_c, 3, KeepMatrix);
+        // std::cout << "CNEQUATIONS3 = " << MixedMesh_c->NEquations() << std::endl;
+        rprint << MixedMesh_c->NEquations() << " ";
     }
     
     TPZMultiphysicsCompMesh * MixedMesh_f = 0;
@@ -317,7 +343,15 @@ void HDiv(int nx, int order_small, int order_high, bool condense_equations_Q, bo
     //Asks if you want to condesate the problem
     if (condense_equations_Q) {
         // Created condensed elements for the elements that have internal nodes
+        // std::cout << "NEQUATIONS1 = " << MixedMesh_f->NEquations() << std::endl;
+        rprint << MixedMesh_f->NEquations() << " ";
+        CondenseBCElements(MixedMesh_f,matIDBC);
+        rprint << MixedMesh_f->NEquations() << " ";
+        // std::cout << "NEQUATIONS2 = " << MixedMesh_f->NEquations() << std::endl;
         TPZCompMeshTools::CondenseElements(MixedMesh_f, 3, KeepMatrix);
+        // std::cout << "NEQUATIONS3 = " << MixedMesh_f->NEquations() << std::endl;
+
+        
         // TPZPrintUtils util;
         // util.PrintCompMesh(MixedMesh_f,"MixedMesh_F_condensed");
     }
@@ -472,10 +506,12 @@ void HDiv(int nx, int order_small, int order_high, bool condense_equations_Q, bo
             //            std::ofstream file("matblock.nb");
             //            sp->Print("k = ",file,EMathematicaInput);
             TPZStepSolver<STATE> cg_solve(an_f.MatrixSolver<STATE>().Matrix());
-            cg_solve.SetCG(200, seqsolver, 1.e-10, 0);
+            int maxIt = 200;
+            cg_solve.SetCG(maxIt, seqsolver, 1.e-10, 0);
             // TPZStepSolver<STATE> step2(an_f.MatrixSolver<STATE>().Matrix());
             // step2.SetDirect(ELDLt);
             
+            // 
 
             //            finesol.Print(std::cout);
             finesol.Zero();
@@ -483,6 +519,8 @@ void HDiv(int nx, int order_small, int order_high, bool condense_equations_Q, bo
             cg_solve.Solve(rhsfine, finesol);
             // step2.Solve(rhsfine, finesol);
             //            finesol.Print(std::cout);
+
+            rprint << cg_solve.NumIterations() << "\n";
             
             MixedMesh_f->LoadSolution(finesol);
             clock6.stop();
@@ -703,7 +741,7 @@ TPZCompMesh * GenerateFluxCmesh(TPZGeoMesh *mesh, int order_internal, int order_
     
     int BC2=-2;
     val2[0]=00;
-    TPZBndCondT<STATE> *bc2 = mat->CreateBC(mat, BC2, N, val1, val2);
+    TPZBndCondT<STATE> *bc2 = mat->CreateBC(mat, BC2, D, val1, val2);
     Cmesh->InsertMaterialObject(bc2);
     
     int BC3=-3;
@@ -713,7 +751,7 @@ TPZCompMesh * GenerateFluxCmesh(TPZGeoMesh *mesh, int order_internal, int order_
     
     int BC4=-4;
     val2[0]=0;
-    TPZBndCondT<STATE> *bc4 = mat->CreateBC(mat, BC4, N, val1, val2);
+    TPZBndCondT<STATE> *bc4 = mat->CreateBC(mat, BC4, D, val1, val2);
     Cmesh->InsertMaterialObject(bc4);
     
     
@@ -1226,4 +1264,127 @@ void HdiVSimple(int nx, int order_high, bool condense_equations_Q, bool two_d_Q)
         
     }
     
+}
+
+
+void AssociateElements(TPZMultiphysicsCompMesh *cmesh, TPZVec<int64_t> &elementgroup, std::set<int> &matId)
+{
+    // for (auto i:matId)
+    // {
+    //     std::cout << " " << i << "\n";
+    // }   
+    
+    int64_t nel = cmesh->NElements();
+    elementgroup.Resize(nel, -1);
+    elementgroup.Fill(-1);
+    
+    int64_t nconnects = cmesh->NConnects();
+    TPZVec<int64_t> groupindex(nconnects, -1);
+    int dim = cmesh->Dimension();
+    for (TPZCompEl *cel : cmesh->ElementVec()) {
+        cel->LoadElementReference();
+        if (!cel || !cel->Reference() || cel->Reference()->Dimension() != dim) {
+            continue;
+        }
+        
+        TPZStack<int64_t> connectlist;
+        cel->BuildConnectList(connectlist);
+
+        int nfacets = cel->Reference()->NSides(cel->Dimension()-1);
+        
+        int k = -1;
+        auto nconnects = connectlist.size();
+
+        for (int i=0; i<nfacets; i++) {
+            int cindex = connectlist[i];
+
+            k++;
+            auto gel = cel->Reference();
+            auto nnodes = gel->NCornerNodes();
+            TPZGeoElSide geoside(gel,k+nnodes);
+            auto neig = geoside.Neighbour(); 
+            if (!neig.Element())continue;
+            int neigMatId = neig.Element()->MaterialId();
+
+            if (matId.find(neigMatId) == matId.end()) {
+                continue;
+            }
+            
+            if (groupindex[cindex] == -1) {
+                groupindex[cindex] = cel->Index();
+            }
+        }
+    }
+
+    // std::cout << "Groups of connects " << groupindex << std::endl;
+    // std::cout << "Groups of connects " << groupindex2 << std::endl;
+    for (TPZCompEl *cel : cmesh->ElementVec()) {
+        if (!cel || !cel->Reference()) {
+            continue;
+        }
+        TPZStack<int64_t> connectlist;
+        cel->BuildConnectList(connectlist);
+
+        int64_t groupfound = -1;
+        int k = -1;
+        for (auto cindex : connectlist) {           
+            if (groupindex[cindex] != -1) {
+                // assign the element to the group
+                if(groupfound != -1 && groupfound != groupindex[cindex])
+                {
+                    //Do nothing
+                }else{
+                    elementgroup[cel->Index()] = groupindex[cindex];
+                    groupfound = groupindex[cindex];
+                }
+            }
+        }
+    }
+    // std::cout << "Element group = " << elementgroup << std::endl;
+}
+
+
+void CondenseBCElements(TPZMultiphysicsCompMesh *cmesh, std::set<int> &matIdBC){
+
+    int64_t nel = cmesh->NElements();
+    TPZVec<int64_t> groupnumber(nel,-1);
+
+    auto aux=matIdBC;
+    /// compute a groupnumber associated with each element
+    AssociateElements(cmesh,groupnumber,aux);
+
+    std::map<int64_t, TPZElementGroup *> groupmap;
+    //    std::cout << "Groups of connects " << groupnumber << std::endl;
+    for (int64_t el = 0; el<nel; el++) {
+        int64_t groupnum = groupnumber[el];
+
+        if(groupnum == -1) continue;
+        auto iter = groupmap.find(groupnum);
+        if (groupmap.find(groupnum) == groupmap.end()) {
+            TPZElementGroup *elgr = new TPZElementGroup(*cmesh);
+            groupmap[groupnum] = elgr;
+            elgr->AddElement(cmesh->Element(el));
+        }
+        else
+        {
+            iter->second->AddElement(cmesh->Element(el));
+        }
+    }
+
+    cmesh->ComputeNodElCon();
+    // increment elconnect em um elemento de pressao 
+    // Compmesh tools condense equations
+    nel = cmesh->NElements();
+    for (int64_t el = 0; el < nel; el++) {
+        TPZCompEl *cel = cmesh->Element(el);
+        TPZElementGroup *elgr = dynamic_cast<TPZElementGroup *> (cel);
+        if (elgr) {
+            TPZCondensedCompEl *cond = new TPZCondensedCompEl(elgr);
+            cond->SetKeepMatrix(false);
+        }
+    }
+
+    cmesh->InitializeBlock();
+    cmesh->ComputeNodElCon();
+
 }

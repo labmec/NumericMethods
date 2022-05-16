@@ -603,7 +603,7 @@ TPZCompMesh * GenerateFluxCmesh(TPZGeoMesh *mesh, int order_internal, int order_
     int BC1=-1;
     TPZFMatrix<STATE> val1(1,1,0.0);
     TPZFMatrix<STATE> val2(1,1,0.0);
-    TPZMaterial *bc1 = mat->CreateBC(mat, BC1, N, val1, val2);
+    TPZMaterial *bc1 = mat->CreateBC(mat, BC1, D, val1, val2);
     Cmesh->InsertMaterialObject(bc1);
     
     int BC2=-2;
@@ -613,7 +613,7 @@ TPZCompMesh * GenerateFluxCmesh(TPZGeoMesh *mesh, int order_internal, int order_
     
     int BC3=-3;
     val2(0,0)=0;
-    TPZMaterial *bc3 = mat->CreateBC(mat, BC3, N, val1, val2);
+    TPZMaterial *bc3 = mat->CreateBC(mat, BC3, D, val1, val2);
     Cmesh->InsertMaterialObject(bc3);
     
     int BC4=-4;
@@ -678,7 +678,7 @@ TPZMultiphysicsCompMesh * GenerateMixedCmesh(TPZVec<TPZCompMesh *> fvecmesh, int
     TPZFMatrix<STATE> val2(1,1,0.0);
     
     val2(0,0)=0.0;
-    TPZMaterial *bc1 = mat->CreateBC(mat, BC1, N, val1, val2);
+    TPZMaterial *bc1 = mat->CreateBC(mat, BC1, D, val1, val2);
     MixedMesh->InsertMaterialObject(bc1);
     
     int BC2=-2;
@@ -688,7 +688,7 @@ TPZMultiphysicsCompMesh * GenerateMixedCmesh(TPZVec<TPZCompMesh *> fvecmesh, int
     
     int BC3=-3;
     val2(0,0)=0;
-    TPZMaterial *bc3 = mat->CreateBC(mat, BC3, N, val1, val2);
+    TPZMaterial *bc3 = mat->CreateBC(mat, BC3, D, val1, val2);
     MixedMesh->InsertMaterialObject(bc3);
     
     int BC4=-4;

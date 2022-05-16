@@ -27,10 +27,10 @@ TPZHdivTransfer<TVar>::~TPZHdivTransfer(){
     
 }
 
-template<class TVar>
-void TPZHdivTransfer<TVar>::Print(const char *name, std::ostream &out , const MatrixOutputFormat form) const {
-    DebugStop();
-}
+// template<class TVar>
+// void TPZHdivTransfer<TVar>::Print(const char *name, std::ostream &out , const MatrixOutputFormat form) const {
+//     DebugStop();
+// }
 
 /**
  * @brief Gather a vector

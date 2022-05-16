@@ -62,8 +62,8 @@ public:
                          const TVar alpha=1., const TVar beta = 0., const int opt = 0) const override;
     
 
-    /** @brief Copy constructor */
-    virtual void Print(const char *name = NULL, std::ostream &out = std::cout , const MatrixOutputFormat form = EFormatted) const override;
+    // /** @brief Copy constructor */
+    // virtual void Print(const char *name = NULL, std::ostream &out = std::cout , const MatrixOutputFormat form = EFormatted) const override;
     
     /** @brief Gather y elements into x vector */
     void Gather(TPZFMatrix<TVar> &y, TPZFMatrix<TVar> &x);
