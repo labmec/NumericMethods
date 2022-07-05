@@ -10,6 +10,7 @@
 #include "pzrefquad.h"
 #include "TPZVTKGeoMesh.h"
 #include "TPZMHMixedMesh4SpacesControl.h"
+#include "TPZMultiphysicsCompMesh.h"
 
 void ComputeCoarseIndices(TPZGeoMesh *gmesh, TPZVec<int64_t> &coarseindices);
 void DivideMesh(TPZGeoMesh * gmesh);
