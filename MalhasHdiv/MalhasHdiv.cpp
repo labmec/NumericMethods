@@ -79,12 +79,15 @@
 #include "TPZPrintUtils.cpp"
 #include "pzelementgroup.h"
 #include "pzcondensedcompel.h"
+#include "ScenarioConfig.h"
 
 #ifdef _AUTODIFF
 #include "tfad.h"
 #include "fad.h"
 #include "pzextractval.h"
 #endif
+
+ScenarioConfig myScenario;
 
 std::ofstream rprint("results.txt",std::ofstream::out);
 
@@ -112,16 +115,17 @@ auto Ladoderecho_2D = [](const TPZVec<REAL> &pt, TPZVec<STATE> &disp){
     STATE x = pt[0];
     STATE y = pt[1];
     
+    double fx = 0.;
     // double fx= 2*M_PI*M_PI*sin(M_PI*x)*sin(M_PI*y);        //Force function definition
     
-       double fx =-4144.653167389283*pow(10,
-                                         -pow(-2*M_PI + 15.*x,2) - pow(-2*M_PI + 15.*y,2))*
-       (-2*M_PI + 15.*x) + 4771.70829943056*
-       pow(10,-pow(-2*M_PI + 15.*x,2) -
-           pow(-2*M_PI + 15.*y,2))*pow(-2*M_PI + 15.*x,3) +
-       4771.70829943056*pow(10,
-                            -pow(-2*M_PI + 15.*x,2) - pow(-2*M_PI + 15.*y,2))*
-       (-2*M_PI + 15.*x)*pow(-2*M_PI + 15.*y,2);
+    //    double fx =-4144.653167389283*pow(10,
+    //                                      -pow(-2*M_PI + 15.*x,2) - pow(-2*M_PI + 15.*y,2))*
+    //    (-2*M_PI + 15.*x) + 4771.70829943056*
+    //    pow(10,-pow(-2*M_PI + 15.*x,2) -
+    //        pow(-2*M_PI + 15.*y,2))*pow(-2*M_PI + 15.*x,3) +
+    //    4771.70829943056*pow(10,
+    //                         -pow(-2*M_PI + 15.*x,2) - pow(-2*M_PI + 15.*y,2))*
+    //    (-2*M_PI + 15.*x)*pow(-2*M_PI + 15.*y,2);
     //
     //    double fx = -4144.653167389282*pow(2,2 - pow(-2*M_PI + 15.*x,2) -
     //                                       pow(-2*M_PI + 15.*y,2))*
@@ -147,20 +151,26 @@ auto exactSol = [](const TPZVec<REAL> &loc,
     const auto &y=loc[1];
     const auto &z=loc[2];
 
-    // u[0]= std::sin(M_PI*x)*std::sin(M_PI*y);
+    u[0]= std::sin(M_PI*x)*std::sin(M_PI*y);
+
+    //EHARMONIC 2
+    REAL a1 = 1./4.;
+    REAL alpha = M_PI/2.;
+    u[0] = x*a1*cos(x*alpha)*cosh(y*alpha) + y*a1*sin(x*alpha)*sinh(y*alpha);
     // u[0] = x*x*x*y - y*y*y*x;    
 
-    // gradU(0,0) = -M_PI*cos(M_PI*x)*sin(M_PI*y);
-    // gradU(1,0) = -M_PI*cos(M_PI*y)*sin(M_PI*x);
+    gradU(0,0) = -M_PI*cos(M_PI*x)*sin(M_PI*y);
+    gradU(1,0) = -M_PI*cos(M_PI*y)*sin(M_PI*x);
     // gradU(0,0) = (3.*x*x*y - y*y*y);
     // gradU(1,0) = (x*x*x - 3.*y*y*x);
 
-    u[0] = 0.;
-    gradU(0,0) = 0.;
-    gradU(1,0) = 0.;
+    // u[0] = 0.;
+    // gradU(0,0) = 0.;
+    // gradU(1,0) = 0.;
 
     //exact Divergent
     gradU(2,0) = -2*M_PI*M_PI*sin(M_PI*x)*sin(M_PI*y);
+    // gradU(2,0) = 0.;
     
 
 };
@@ -181,7 +191,7 @@ void SolExact(const TPZVec<REAL> &ptx, TPZVec<STATE> &sol, TPZFMatrix<STATE> &fl
 //Creating computational meshes
 TPZCompMesh * GeneratePressureCmesh(TPZGeoMesh *Gmesh, int order_internal);
 TPZCompMesh * GenerateConstantCmesh(TPZGeoMesh *Gmesh, bool third_LM);
-TPZCompMesh * GenerateFluxCmesh(TPZGeoMesh *Gmesh, int order_internal, int order_border);
+TPZCompMesh * GenerateFluxCmesh(TPZGeoMesh *Gmesh, int order_internal, int order_border, bool coarse = false);
 TPZMultiphysicsCompMesh * GenerateMixedCmesh(TPZVec<TPZCompMesh *> fvecmesh, int order, bool two_d_Q);
 
 //Creates index vector
@@ -220,51 +230,182 @@ int main(){
     
     TPZTimer clock;
     clock.start();
-    int k = 5;
-    std::cout << "\nSolving problem 2 \n\n";
+    int k = 2;
+    std::cout << "\nSolving problem 2, k = " << k << "\n\n";
     HDiv(2, 1, k, true, true);
-    std::cout << "\nSolving problem 5 \n\n";
+    std::cout << "\nSolving problem 5, k = " << k << "\n\n";
     HDiv(5, 1, k, true, true);
-    std::cout << "\nSolving problem 10 \n\n";
+    std::cout << "\nSolving problem 10, k = " << k << "\n\n";
     HDiv(10, 1, k, true, true);
-    std::cout << "\nSolving problem 15 \n\n";
+    std::cout << "\nSolving problem 15, k = " << k << "\n\n";
     HDiv(15, 1, k, true, true);
-    std::cout << "\nSolving problem 20 \n\n";
+    std::cout << "\nSolving problem 20, k = " << k << "\n\n";
     HDiv(20, 1, k, true, true);
-    std::cout << "\nSolving problem 25 \n\n";
+    std::cout << "\nSolving problem 25, k = " << k << "\n\n";
     HDiv(25, 1, k, true, true);
-    std::cout << "\nSolving problem 30 \n\n";
+    std::cout << "\nSolving problem 30, k = " << k << "\n\n";
     HDiv(30, 1, k, true, true);
-    std::cout << "\nSolving problem 35 \n\n";
+    std::cout << "\nSolving problem 35, k = " << k << "\n\n";
     HDiv(35, 1, k, true, true);
-    std::cout << "\nSolving problem 40 \n\n";
+    std::cout << "\nSolving problem 40, k = " << k << "\n\n";
     HDiv(40, 1, k, true, true);
-    std::cout << "\nSolving problem 45 \n\n";
+    std::cout << "\nSolving problem 45, k = " << k << "\n\n";
     HDiv(45, 1, k, true, true);
-    std::cout << "\nSolving problem 50 \n\n";
+    std::cout << "\nSolving problem 50, k = " << k << "\n\n";
     HDiv(50, 1, k, true, true);
-    std::cout << "\nSolving problem 60 \n\n";
+    std::cout << "\nSolving problem 60, k = " << k << "\n\n";
     HDiv(60, 1, k, true, true);
-    std::cout << "\nSolving problem 70 \n\n";
+    std::cout << "\nSolving problem 70, k = " << k << "\n\n";
     HDiv(70, 1, k, true, true);
-    std::cout << "\nSolving problem 80 \n\n";
+    std::cout << "\nSolving problem 80, k = " << k << "\n\n";
     HDiv(80, 1, k, true, true);
-    std::cout << "\nSolving problem 90 \n\n";
+    std::cout << "\nSolving problem 90, k = " << k << "\n\n";
     HDiv(90, 1, k, true, true);
-    std::cout << "\nSolving problem 100 \n\n";
+    std::cout << "\nSolving problem 100, k = " << k << "\n\n";
     HDiv(100, 1, k, true, true);
-    std::cout << "\nSolving problem 120 \n\n";
+    std::cout << "\nSolving problem 120, k = " << k << "\n\n";
     HDiv(120, 1, k, true, true);
-    std::cout << "\nSolving problem 140 \n\n";
+    std::cout << "\nSolving problem 140, k = " << k << "\n\n";
     HDiv(140, 1, k, true, true);
-    std::cout << "\nSolving problem 160 \n\n";
+    std::cout << "\nSolving problem 160, k = " << k << "\n\n";
     HDiv(160, 1, k, true, true);
-    std::cout << "\nSolving problem 180 \n\n";
+    std::cout << "\nSolving problem 180, k = " << k << "\n\n";
     HDiv(180, 1, k, true, true);
-    std::cout << "\nSolving problem 200 \n\n";
+    std::cout << "\nSolving problem 200, k = " << k << "\n\n";
+    HDiv(200, 1, k, true, true);
+
+    k = 3;
+    std::cout << "\nSolving problem 2, k = " << k << "\n\n";
+    HDiv(2, 1, k, true, true);
+    std::cout << "\nSolving problem 5, k = " << k << "\n\n";
+    HDiv(5, 1, k, true, true);
+    std::cout << "\nSolving problem 10, k = " << k << "\n\n";
+    HDiv(10, 1, k, true, true);
+    std::cout << "\nSolving problem 15, k = " << k << "\n\n";
+    HDiv(15, 1, k, true, true);
+    std::cout << "\nSolving problem 20, k = " << k << "\n\n";
+    HDiv(20, 1, k, true, true);
+    std::cout << "\nSolving problem 25, k = " << k << "\n\n";
+    HDiv(25, 1, k, true, true);
+    std::cout << "\nSolving problem 30, k = " << k << "\n\n";
+    HDiv(30, 1, k, true, true);
+    std::cout << "\nSolving problem 35, k = " << k << "\n\n";
+    HDiv(35, 1, k, true, true);
+    std::cout << "\nSolving problem 40, k = " << k << "\n\n";
+    HDiv(40, 1, k, true, true);
+    std::cout << "\nSolving problem 45, k = " << k << "\n\n";
+    HDiv(45, 1, k, true, true);
+    std::cout << "\nSolving problem 50, k = " << k << "\n\n";
+    HDiv(50, 1, k, true, true);
+    std::cout << "\nSolving problem 60, k = " << k << "\n\n";
+    HDiv(60, 1, k, true, true);
+    std::cout << "\nSolving problem 70, k = " << k << "\n\n";
+    HDiv(70, 1, k, true, true);
+    std::cout << "\nSolving problem 80, k = " << k << "\n\n";
+    HDiv(80, 1, k, true, true);
+    std::cout << "\nSolving problem 90, k = " << k << "\n\n";
+    HDiv(90, 1, k, true, true);
+    std::cout << "\nSolving problem 100, k = " << k << "\n\n";
+    HDiv(100, 1, k, true, true);
+    std::cout << "\nSolving problem 120, k = " << k << "\n\n";
+    HDiv(120, 1, k, true, true);
+    std::cout << "\nSolving problem 140, k = " << k << "\n\n";
+    HDiv(140, 1, k, true, true);
+    std::cout << "\nSolving problem 160, k = " << k << "\n\n";
+    HDiv(160, 1, k, true, true);
+    std::cout << "\nSolving problem 180, k = " << k << "\n\n";
+    HDiv(180, 1, k, true, true);
+    std::cout << "\nSolving problem 200, k = " << k << "\n\n";
+    HDiv(200, 1, k, true, true);
+
+    k = 4;
+    std::cout << "\nSolving problem 2, k = " << k << "\n\n";
+    HDiv(2, 1, k, true, true);
+    std::cout << "\nSolving problem 5, k = " << k << "\n\n";
+    HDiv(5, 1, k, true, true);
+    std::cout << "\nSolving problem 10, k = " << k << "\n\n";
+    HDiv(10, 1, k, true, true);
+    std::cout << "\nSolving problem 15, k = " << k << "\n\n";
+    HDiv(15, 1, k, true, true);
+    std::cout << "\nSolving problem 20, k = " << k << "\n\n";
+    HDiv(20, 1, k, true, true);
+    std::cout << "\nSolving problem 25, k = " << k << "\n\n";
+    HDiv(25, 1, k, true, true);
+    std::cout << "\nSolving problem 30, k = " << k << "\n\n";
+    HDiv(30, 1, k, true, true);
+    std::cout << "\nSolving problem 35, k = " << k << "\n\n";
+    HDiv(35, 1, k, true, true);
+    std::cout << "\nSolving problem 40, k = " << k << "\n\n";
+    HDiv(40, 1, k, true, true);
+    std::cout << "\nSolving problem 45, k = " << k << "\n\n";
+    HDiv(45, 1, k, true, true);
+    std::cout << "\nSolving problem 50, k = " << k << "\n\n";
+    HDiv(50, 1, k, true, true);
+    std::cout << "\nSolving problem 60, k = " << k << "\n\n";
+    HDiv(60, 1, k, true, true);
+    std::cout << "\nSolving problem 70, k = " << k << "\n\n";
+    HDiv(70, 1, k, true, true);
+    std::cout << "\nSolving problem 80, k = " << k << "\n\n";
+    HDiv(80, 1, k, true, true);
+    std::cout << "\nSolving problem 90, k = " << k << "\n\n";
+    HDiv(90, 1, k, true, true);
+    std::cout << "\nSolving problem 100, k = " << k << "\n\n";
+    HDiv(100, 1, k, true, true);
+    std::cout << "\nSolving problem 120, k = " << k << "\n\n";
+    HDiv(120, 1, k, true, true);
+    std::cout << "\nSolving problem 140, k = " << k << "\n\n";
+    HDiv(140, 1, k, true, true);
+    std::cout << "\nSolving problem 160, k = " << k << "\n\n";
+    HDiv(160, 1, k, true, true);
+    std::cout << "\nSolving problem 180, k = " << k << "\n\n";
+    HDiv(180, 1, k, true, true);
+    std::cout << "\nSolving problem 200, k = " << k << "\n\n";
+    HDiv(200, 1, k, true, true);
+
+    k = 5;
+    std::cout << "\nSolving problem 2, k = " << k << "\n\n";
+    HDiv(2, 1, k, true, true);
+    std::cout << "\nSolving problem 5, k = " << k << "\n\n";
+    HDiv(5, 1, k, true, true);
+    std::cout << "\nSolving problem 10, k = " << k << "\n\n";
+    HDiv(10, 1, k, true, true);
+    std::cout << "\nSolving problem 15, k = " << k << "\n\n";
+    HDiv(15, 1, k, true, true);
+    std::cout << "\nSolving problem 20, k = " << k << "\n\n";
+    HDiv(20, 1, k, true, true);
+    std::cout << "\nSolving problem 25, k = " << k << "\n\n";
+    HDiv(25, 1, k, true, true);
+    std::cout << "\nSolving problem 30, k = " << k << "\n\n";
+    HDiv(30, 1, k, true, true);
+    std::cout << "\nSolving problem 35, k = " << k << "\n\n";
+    HDiv(35, 1, k, true, true);
+    std::cout << "\nSolving problem 40, k = " << k << "\n\n";
+    HDiv(40, 1, k, true, true);
+    std::cout << "\nSolving problem 45, k = " << k << "\n\n";
+    HDiv(45, 1, k, true, true);
+    std::cout << "\nSolving problem 50, k = " << k << "\n\n";
+    HDiv(50, 1, k, true, true);
+    std::cout << "\nSolving problem 60, k = " << k << "\n\n";
+    HDiv(60, 1, k, true, true);
+    std::cout << "\nSolving problem 70, k = " << k << "\n\n";
+    HDiv(70, 1, k, true, true);
+    std::cout << "\nSolving problem 80, k = " << k << "\n\n";
+    HDiv(80, 1, k, true, true);
+    std::cout << "\nSolving problem 90, k = " << k << "\n\n";
+    HDiv(90, 1, k, true, true);
+    std::cout << "\nSolving problem 100, k = " << k << "\n\n";
+    HDiv(100, 1, k, true, true);
+    std::cout << "\nSolving problem 120, k = " << k << "\n\n";
+    HDiv(120, 1, k, true, true);
+    std::cout << "\nSolving problem 140, k = " << k << "\n\n";
+    HDiv(140, 1, k, true, true);
+    std::cout << "\nSolving problem 160, k = " << k << "\n\n";
+    HDiv(160, 1, k, true, true);
+    std::cout << "\nSolving problem 180, k = " << k << "\n\n";
+    HDiv(180, 1, k, true, true);
+    std::cout << "\nSolving problem 200, k = " << k << "\n\n";
     HDiv(200, 1, k, true, true);
     
-    //    HdiVSimple(30, 2, true, true);
     clock.stop();
     std::ofstream Out("TotalTime.txt");
     operator<<(Out, clock );
@@ -291,11 +432,17 @@ void HDiv(int nx, int order_small, int order_high, bool condense_equations_Q, bo
     //        ShowShape(flux,el_index,i,file);
     //    };
     
+    
+
+    myScenario.BasePOrder = order_high;
+    myScenario.Scenario = EScenario::Scenario8;
+    myScenario.ConfigurateScenario();
+
     bool KeepOneLagrangian = true;
     bool KeepMatrix = false;
     bool render_shapes_Q = false;               //Prints a .VTK showing the render shapes
     bool must_opt_band_width_Q = true;
-    int number_threads = 12;
+    int number_threads = 0;
     
     TPZGeoMesh *gmesh;
     
@@ -320,8 +467,8 @@ void HDiv(int nx, int order_small, int order_high, bool condense_equations_Q, bo
     TPZMultiphysicsCompMesh *MixedMesh_c = 0;
     TPZManVector<TPZCompMesh *> vecmesh_c(4);      //Vector for coarse mesh case (4 spaces)
     {
-        TPZCompMesh *q_cmesh = GenerateFluxCmesh(gmesh, order_small, order_small);
-        TPZCompMesh *p_cmesh = GeneratePressureCmesh(gmesh, 0);
+        TPZCompMesh *q_cmesh = GenerateFluxCmesh(gmesh, myScenario.CoarseBubbleFluxPOrder, order_small, true);
+        TPZCompMesh *p_cmesh = GeneratePressureCmesh(gmesh, myScenario.CoarsePressurePOrder);
         TPZCompMesh *gavg_cmesh = GenerateConstantCmesh(gmesh,false);
         TPZCompMesh *pavg_cmesh = GenerateConstantCmesh(gmesh,true);
         vecmesh_c[0] = q_cmesh;              //Flux
@@ -343,6 +490,7 @@ void HDiv(int nx, int order_small, int order_high, bool condense_equations_Q, bo
     if (condense_equations_Q) {             //Asks if you want to condesate the problem
         // Created condensed elements for the elements that have internal nodes
         // std::cout << "CNEQUATIONS1 = " << MixedMesh_c->NEquations() << std::endl;
+        rprint << MixedMesh_c->NEquations() << " ";
         CondenseBCElements(MixedMesh_c,matIDBC);
         // std::cout << "CNEQUATIONS2 = " << MixedMesh_c->NEquations() << std::endl;
         TPZCompMeshTools::CondenseElements(MixedMesh_c, 3, KeepMatrix);
@@ -355,8 +503,8 @@ void HDiv(int nx, int order_small, int order_high, bool condense_equations_Q, bo
     TPZMultiphysicsCompMesh * MixedMesh_f = 0;
     TPZManVector<TPZCompMesh *> vecmesh_f(4);      //Vector for fine mesh case (4 spaces)
     {
-        TPZCompMesh *q_cmesh = GenerateFluxCmesh(gmesh, order_high, order_small);
-        TPZCompMesh *p_cmesh = GeneratePressureCmesh(gmesh, 0);
+        TPZCompMesh *q_cmesh = GenerateFluxCmesh(gmesh, myScenario.FineBubbleFluxPOrder, order_small, false);
+        TPZCompMesh *p_cmesh = GeneratePressureCmesh(gmesh, myScenario.FinePressurePOrder);
         TPZCompMesh *gavg_cmesh = GenerateConstantCmesh(gmesh,false);
         TPZCompMesh *pavg_cmesh = GenerateConstantCmesh(gmesh,true);
         vecmesh_f[0] = q_cmesh;              //Flux
@@ -440,7 +588,7 @@ void HDiv(int nx, int order_small, int order_high, bool condense_equations_Q, bo
     std::cout << "Finish Assembling coarse model... \n";
     //    an_c->Solve();      //Sin esto se pierde la solución
     
-    AssemblyAndSolvingCoarse.stop();
+    // AssemblyAndSolvingCoarse.stop();
     
     std::ofstream Out_AssemblyAndSolvingCoarse("Assembly_Coarse.txt");
     operator<<(Out_AssemblyAndSolvingCoarse, AssemblyAndSolvingCoarse );
@@ -564,6 +712,18 @@ void HDiv(int nx, int order_small, int order_high, bool condense_equations_Q, bo
             clock6.stop();
             std::ofstream Out6("Iterative_Method.txt");
             operator<<(Out6, clock6 );
+
+            // std::ofstream anPostProcessFile("postprocess.txt");
+            // TPZManVector<REAL,5> error, error_c;
+            // an_f.PostProcessError(error,false,anPostProcessFile);
+            // std::cout << "ERROR[0] = " << std::scientific << std::setprecision(15) << error[0] << std::endl;
+            // std::cout << "ERROR[1] = " << error[1] << std::endl;
+            // std::cout << "ERROR[2] = " << error[2] << std::endl;
+
+            // an_c.PostProcessError(error_c,false,anPostProcessFile);
+            // std::cout << "ERROR_C[0] = " << std::scientific << std::setprecision(15) << error_c[0] << std::endl;
+            // std::cout << "ERROR_C[1] = " << error_c[1] << std::endl;
+            // std::cout << "ERROR_C[2] = " << error_c[2] << std::endl;
         }
         
         
@@ -748,7 +908,7 @@ TPZCompMesh * GenerateConstantCmesh(TPZGeoMesh *Gmesh, bool third_LM)
  * @param order_border: Order used for border elements
  * @return Flux computational mesh
  */
-TPZCompMesh * GenerateFluxCmesh(TPZGeoMesh *mesh, int order_internal, int order_border){
+TPZCompMesh * GenerateFluxCmesh(TPZGeoMesh *mesh, int order_internal, int order_border, bool coarse){
     
     int dimen = mesh->Dimension();
     TPZCompMesh *Cmesh = new TPZCompMesh(mesh);
@@ -768,8 +928,7 @@ TPZCompMesh * GenerateFluxCmesh(TPZGeoMesh *mesh, int order_internal, int order_
     
     //Create H(div) functions
     
-    // Cmesh->ApproxSpace().SetHDivFamily(HDivFamily::EHDivStandard);
-    Cmesh->ApproxSpace().SetHDivFamily(HDivFamily::EHDivConstant);
+    Cmesh->ApproxSpace().SetHDivFamily(myScenario.HDivFam);
     Cmesh->ApproxSpace().SetAllCreateFunctionsHDiv(dimen);
     
     //Insert boundary conditions
@@ -799,6 +958,8 @@ TPZCompMesh * GenerateFluxCmesh(TPZGeoMesh *mesh, int order_internal, int order_
     
     Cmesh->AutoBuild();
     
+    // if (coarse) return Cmesh;
+
     int64_t nel = Cmesh->NElements();
     for (int el=0; el<nel; el++) {
         TPZCompEl *cel = Cmesh->Element(el);
@@ -806,7 +967,16 @@ TPZCompMesh * GenerateFluxCmesh(TPZGeoMesh *mesh, int order_internal, int order_
         TPZInterpolatedElement *intel = dynamic_cast<TPZInterpolatedElement *>(cel);
         if(!intel) DebugStop();
         TPZGeoEl *gel = intel->Reference();
-        intel->SetSideOrder(gel->NSides()-1, order_internal);
+        if (coarse && gel->Dimension() != Cmesh->Dimension()) {
+            intel->SetSideOrder(gel->NSides()-1, myScenario.CoarseBoundaryFluxPOrder);
+        } else if (coarse) {
+            intel->SetSideOrder(gel->NSides()-1, myScenario.CoarseBubbleFluxPOrder);
+        } else if (gel->Dimension() != Cmesh->Dimension()) {
+            intel->SetSideOrder(gel->NSides()-1, myScenario.FineBoundaryFluxPOrder);
+        } else {
+            intel->SetSideOrder(gel->NSides()-1, myScenario.FineBubbleFluxPOrder);
+        }
+        
     }
     Cmesh->ExpandSolution();
     
