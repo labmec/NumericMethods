@@ -90,7 +90,7 @@
 
 ScenarioConfig myScenario;
 
-std::ofstream rprint("Harmonic3D_Scenario8.txt",std::ofstream::out);
+std::ofstream rprint("Harmonic3DH_Scenario2.txt",std::ofstream::out);
 
 /**
  * @brief Generates the force function for the 1D case
@@ -390,7 +390,7 @@ void HDiv(int nx, int order_small, int order_high, bool condense_equations_Q, bo
     //    };
 
     myScenario.BasePOrder = order_high;
-    myScenario.Scenario = EScenario::Scenario8;
+    myScenario.Scenario = EScenario::Scenario2;
     myScenario.ConfigurateScenario();
     
     bool KeepOneLagrangian = true;
@@ -423,7 +423,7 @@ void HDiv(int nx, int order_small, int order_high, bool condense_equations_Q, bo
     TPZMultiphysicsCompMesh *MixedMesh_c = 0;
     TPZManVector<TPZCompMesh *> vecmesh_c(4);      //Vector for coarse mesh case (4 spaces)
     {
-        TPZCompMesh *q_cmesh = GenerateFluxCmesh(gmesh, myScenario.CoarseBubbleFluxPOrder, order_small, true);
+        TPZCompMesh *q_cmesh = GenerateFluxCmesh(gmesh, myScenario.CoarseBubbleFluxPOrder, myScenario.CoarseInternalFluxPOrder, true);
         TPZCompMesh *p_cmesh = GeneratePressureCmesh(gmesh, myScenario.CoarsePressurePOrder);
         TPZCompMesh *gavg_cmesh = GenerateConstantCmesh(gmesh,false);
         TPZCompMesh *pavg_cmesh = GenerateConstantCmesh(gmesh,true);
@@ -446,6 +446,7 @@ void HDiv(int nx, int order_small, int order_high, bool condense_equations_Q, bo
     if (condense_equations_Q) {             //Asks if you want to condesate the problem
         // Created condensed elements for the elements that have internal nodes
         // std::cout << "CNEQUATIONS1 = " << MixedMesh_c->NEquations() << std::endl;
+        rprint << MixedMesh_c->NEquations() << " ";
         CondenseBCElements(MixedMesh_c,matIDBC);
         // std::cout << "CNEQUATIONS2 = " << MixedMesh_c->NEquations() << std::endl;
         TPZCompMeshTools::CondenseElements(MixedMesh_c, 3, KeepMatrix);
@@ -456,7 +457,7 @@ void HDiv(int nx, int order_small, int order_high, bool condense_equations_Q, bo
     TPZMultiphysicsCompMesh * MixedMesh_f = 0;
     TPZManVector<TPZCompMesh *> vecmesh_f(4);      //Vector for fine mesh case (4 spaces)
     {
-        TPZCompMesh *q_cmesh = GenerateFluxCmesh(gmesh, myScenario.FineBubbleFluxPOrder, order_small, false);
+        TPZCompMesh *q_cmesh = GenerateFluxCmesh(gmesh, myScenario.FineBubbleFluxPOrder, myScenario.FineInternalFluxPOrder, false);
         TPZCompMesh *p_cmesh = GeneratePressureCmesh(gmesh, myScenario.FinePressurePOrder);
         TPZCompMesh *gavg_cmesh = GenerateConstantCmesh(gmesh,false);
         TPZCompMesh *pavg_cmesh = GenerateConstantCmesh(gmesh,true);
@@ -482,7 +483,7 @@ void HDiv(int nx, int order_small, int order_high, bool condense_equations_Q, bo
         // std::cout << "NEQUATIONS1 = " << MixedMesh_f->NEquations() << std::endl;
         rprint << MixedMesh_f->NEquations() << " ";
         CondenseBCElements(MixedMesh_f,matIDBC);
-        rprint << MixedMesh_f->NEquations() << " ";
+        rprint << MixedMesh_f->NEquations() << " \n";
         // std::cout << "NEQUATIONS2 = " << MixedMesh_f->NEquations() << std::endl;
         TPZCompMeshTools::CondenseElements(MixedMesh_f, 3, KeepMatrix);
         // std::cout << "NEQUATIONS3 = " << MixedMesh_f->NEquations() << std::endl;
@@ -491,7 +492,6 @@ void HDiv(int nx, int order_small, int order_high, bool condense_equations_Q, bo
         // TPZPrintUtils util;
         // util.PrintCompMesh(MixedMesh_f,"MixedMesh_F_condensed");
     }
-    
     
     //Solving the system:
     MixedMesh_c->InitializeBlock();    //Resequence the block object, remove unconnected connect objects
@@ -510,6 +510,7 @@ void HDiv(int nx, int order_small, int order_high, bool condense_equations_Q, bo
         varname[0]="Flux";
         anloc.ShowShape(filename, indices,1,varname);
     }
+    
     
     
     TPZTimer AssemblyFine;

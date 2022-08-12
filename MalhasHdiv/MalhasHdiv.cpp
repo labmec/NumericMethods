@@ -89,7 +89,7 @@
 
 ScenarioConfig myScenario;
 
-std::ofstream rprint("results.txt",std::ofstream::out);
+std::ofstream rprint("Harmonic2DH_Scenario8.txt",std::ofstream::out);
 
 /**
  * @brief Generates the force function for the 1D case
@@ -151,26 +151,30 @@ auto exactSol = [](const TPZVec<REAL> &loc,
     const auto &y=loc[1];
     const auto &z=loc[2];
 
-    u[0]= std::sin(M_PI*x)*std::sin(M_PI*y);
+    // u[0]= std::sin(M_PI*x)*std::sin(M_PI*y);
 
-    //EHARMONIC 2
-    REAL a1 = 1./4.;
-    REAL alpha = M_PI/2.;
-    u[0] = x*a1*cos(x*alpha)*cosh(y*alpha) + y*a1*sin(x*alpha)*sinh(y*alpha);
-    // u[0] = x*x*x*y - y*y*y*x;    
+    // //EHARMONIC 2
+    // REAL a1 = 1./4.;
+    // REAL alpha = M_PI/2.;
+    // u[0] = x*a1*cos(x*alpha)*cosh(y*alpha) + y*a1*sin(x*alpha)*sinh(y*alpha);
+    // // u[0] = x*x*x*y - y*y*y*x;    
 
-    gradU(0,0) = -M_PI*cos(M_PI*x)*sin(M_PI*y);
-    gradU(1,0) = -M_PI*cos(M_PI*y)*sin(M_PI*x);
-    // gradU(0,0) = (3.*x*x*y - y*y*y);
-    // gradU(1,0) = (x*x*x - 3.*y*y*x);
+    // gradU(0,0) = -M_PI*cos(M_PI*x)*sin(M_PI*y);
+    // gradU(1,0) = -M_PI*cos(M_PI*y)*sin(M_PI*x);
+    // // gradU(0,0) = (3.*x*x*y - y*y*y);
+    // // gradU(1,0) = (x*x*x - 3.*y*y*x);
 
-    // u[0] = 0.;
-    // gradU(0,0) = 0.;
-    // gradU(1,0) = 0.;
+    // // u[0] = 0.;
+    // // gradU(0,0) = 0.;
+    // // gradU(1,0) = 0.;
 
-    //exact Divergent
-    gradU(2,0) = -2*M_PI*M_PI*sin(M_PI*x)*sin(M_PI*y);
-    // gradU(2,0) = 0.;
+    // //exact Divergent
+    // gradU(2,0) = -2*M_PI*M_PI*sin(M_PI*x)*sin(M_PI*y);
+    // // gradU(2,0) = 0.;
+    //EHarmonic
+    u[0] = exp(M_PI*x)*sin(M_PI*y);
+    gradU(0,0) = M_PI*exp(M_PI*x)*sin(M_PI*y);
+    gradU(1,0) = M_PI*exp(M_PI*x)*cos(M_PI*y);
     
 
 };
@@ -435,14 +439,14 @@ void HDiv(int nx, int order_small, int order_high, bool condense_equations_Q, bo
     
 
     myScenario.BasePOrder = order_high;
-    myScenario.Scenario = EScenario::Scenario8;
+    myScenario.Scenario = EScenario::Scenario2;
     myScenario.ConfigurateScenario();
 
     bool KeepOneLagrangian = true;
     bool KeepMatrix = false;
     bool render_shapes_Q = false;               //Prints a .VTK showing the render shapes
     bool must_opt_band_width_Q = true;
-    int number_threads = 0;
+    int number_threads = 12;
     
     TPZGeoMesh *gmesh;
     
@@ -467,7 +471,7 @@ void HDiv(int nx, int order_small, int order_high, bool condense_equations_Q, bo
     TPZMultiphysicsCompMesh *MixedMesh_c = 0;
     TPZManVector<TPZCompMesh *> vecmesh_c(4);      //Vector for coarse mesh case (4 spaces)
     {
-        TPZCompMesh *q_cmesh = GenerateFluxCmesh(gmesh, myScenario.CoarseBubbleFluxPOrder, order_small, true);
+        TPZCompMesh *q_cmesh = GenerateFluxCmesh(gmesh, myScenario.CoarseBubbleFluxPOrder, myScenario.CoarseInternalFluxPOrder, true);
         TPZCompMesh *p_cmesh = GeneratePressureCmesh(gmesh, myScenario.CoarsePressurePOrder);
         TPZCompMesh *gavg_cmesh = GenerateConstantCmesh(gmesh,false);
         TPZCompMesh *pavg_cmesh = GenerateConstantCmesh(gmesh,true);
@@ -503,7 +507,7 @@ void HDiv(int nx, int order_small, int order_high, bool condense_equations_Q, bo
     TPZMultiphysicsCompMesh * MixedMesh_f = 0;
     TPZManVector<TPZCompMesh *> vecmesh_f(4);      //Vector for fine mesh case (4 spaces)
     {
-        TPZCompMesh *q_cmesh = GenerateFluxCmesh(gmesh, myScenario.FineBubbleFluxPOrder, order_small, false);
+        TPZCompMesh *q_cmesh = GenerateFluxCmesh(gmesh, myScenario.FineBubbleFluxPOrder, myScenario.FineInternalFluxPOrder, false);
         TPZCompMesh *p_cmesh = GeneratePressureCmesh(gmesh, myScenario.FinePressurePOrder);
         TPZCompMesh *gavg_cmesh = GenerateConstantCmesh(gmesh,false);
         TPZCompMesh *pavg_cmesh = GenerateConstantCmesh(gmesh,true);

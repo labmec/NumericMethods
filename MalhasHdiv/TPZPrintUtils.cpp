@@ -22,7 +22,7 @@
 #include "pzmatred.h"
 #include "TPZSpStructMatrix.h"
 #include "pzbdstrmatrix.h"
-#include <TPZCopySolve.h>
+// #include <TPZCopySolve.h>
 
 // Util to print a summary of element information (mainly the connects) of a computational mesh
 void TPZPrintUtils::PrintCMeshConnects(TPZCompMesh *cmesh){
